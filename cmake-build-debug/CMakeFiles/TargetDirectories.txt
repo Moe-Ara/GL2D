@@ -1,0 +1,6 @@
+Z:/Projects/GL2D/cmake-build-debug/CMakeFiles/GL2D.dir
+Z:/Projects/GL2D/cmake-build-debug/CMakeFiles/stb_image.dir
+Z:/Projects/GL2D/cmake-build-debug/CMakeFiles/GL2D_TEST.dir
+Z:/Projects/GL2D/cmake-build-debug/CMakeFiles/test.dir
+Z:/Projects/GL2D/cmake-build-debug/CMakeFiles/edit_cache.dir
+Z:/Projects/GL2D/cmake-build-debug/CMakeFiles/rebuild_cache.dir
