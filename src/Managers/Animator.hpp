@@ -5,6 +5,7 @@
 #ifndef GL2D_ANIMATOR_HPP
 #define GL2D_ANIMATOR_HPP
 
+#include <functional>
 #include <memory>
 #include "GameObjects/Sprite.hpp"
 #include "Graphics/Animation.hpp"
@@ -34,17 +35,39 @@ namespace Managers {
         void resume();
 
         void update(float deltaTime);
+
+        std::shared_ptr<Graphics::Animation> getCurrentAnimation() const;
+
+        const Graphics::Frame* getCurrentFrame() const;
+
         void reset();
 
+        using FrameChangedCallback = std::function<void(const std::shared_ptr<Graphics::Animation>&, size_t, const Graphics::Frame&)>;
+        using AnimationFinishedCallback = std::function<void(const std::shared_ptr<Graphics::Animation>&)>;
+        using FrameEventCallback = std::function<void(const std::string&, const std::shared_ptr<Graphics::Animation>&, size_t)>;
+
+        void setFrameChangedCallback(FrameChangedCallback callback);
+        void setAnimationFinishedCallback(AnimationFinishedCallback callback);
+        void setFrameEventCallback(FrameEventCallback callback);
 
     private:
         void updateSpriteUV();
+        void dispatchFrameChanged(const Graphics::Frame &frame);
+        void dispatchAnimationFinished();
+        void advanceFrame();
+        void configurePlaybackStart();
+        float resolveFrameDuration(const Graphics::Frame &frame) const;
 
         std::shared_ptr<GameObjects::Sprite> m_sprite;
         std::shared_ptr<Graphics::Animation> m_currentAnimation;
         size_t m_currentFrameIndex;
         float m_elapsedTime;
         bool m_isPlaying;
+        int m_frameDirection{1};
+        bool m_hasNotifiedCompletion{false};
+        FrameChangedCallback m_frameChangedCallback;
+        AnimationFinishedCallback m_animationFinishedCallback;
+        FrameEventCallback m_frameEventCallback;
     };
 
 } // Managers

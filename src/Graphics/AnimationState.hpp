@@ -38,6 +38,8 @@ namespace Graphics {
 
         const std::vector<std::pair<std::weak_ptr<Utils::IState>, std::function<bool()>>> &getTransitions() const;
 
+        std::shared_ptr<Animation> getAnimation() const { return m_animation; }
+
     private:
         std::shared_ptr<Animation> m_animation;
         std::shared_ptr<Managers::Animator> m_animator;
