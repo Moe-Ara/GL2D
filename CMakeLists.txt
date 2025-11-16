@@ -88,7 +88,8 @@ enable_testing()
 
 # Test executable
 add_executable(GL2D_TEST Testing/testingGameObject.cpp
-        Testing/testingGameObject.cpp)
+        Testing/testingGameObject.cpp
+        Testing/AnimationMetadataTests.cpp)
 
 # Include directories for test target
 target_include_directories(GL2D_TEST PRIVATE

@@ -28,6 +28,8 @@ namespace GameObjects {
         void bind()const;
         void unbind()const;
         void render()const;
+        void updateVertices(const std::vector<Vertex>& vertices);
+        void setTexture(std::shared_ptr<Texture> texture);
     private:
         void createVertexBuffer(const std::vector<Vertex>& vertices);
         void createIndexBuffer(const std::vector<uint32_t>& indices);
@@ -36,6 +38,7 @@ namespace GameObjects {
         GLuint m_vbo{},m_ibo{},m_vao{};
         std::shared_ptr<Texture> m_texture;
         GLsizei m_indexCount{};
+        GLsizeiptr m_vertexBufferSize{};
 
     };
 

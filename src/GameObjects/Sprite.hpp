@@ -34,6 +34,8 @@ namespace GameObjects {
         void setPosition(const glm::vec2& newPos);
         void setSize(const glm::vec2& newSize);
         void setUVCoords(const glm::vec4 &newUV);
+        void setTexture(const std::shared_ptr<Texture> &newTexture);
+
         // Getters
         const glm::vec3 &getColor() const;
         const glm::vec4 &getUVCoords() const;
@@ -43,14 +45,15 @@ namespace GameObjects {
         bool hasTexture() const;
 
     private:
-        std::shared_ptr<Mesh> m_mesh;
+        mutable std::shared_ptr<Mesh> m_mesh;
         std::shared_ptr<Texture> m_texture;
         glm::vec2 m_position{};
         glm::vec2 m_size{};
         glm::vec4 m_uvCoords{};
         glm::vec3 m_color{};
-        bool m_dirty{true};
-        void setupMesh();
+        mutable bool m_dirty{true};
+        void ensureMesh() const;
+        std::vector<Vertex> buildVertices() const;
     };
 
 } // namespace GameObjects

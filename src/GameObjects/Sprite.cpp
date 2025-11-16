@@ -3,19 +3,20 @@
 //
 
 #include <iostream>
+#include <vector>
 #include "Sprite.hpp"
 
 namespace GameObjects {
 
     Sprite::Sprite(glm::vec2 position, glm::vec2 size, glm::vec3 color)
             : m_position(position), m_size(size), m_color(color), m_texture(nullptr), m_uvCoords(0, 0, 1, 1) {
-        setupMesh();
+        ensureMesh();
     }
 
     Sprite::Sprite(std::shared_ptr<Texture> texture, glm::vec2 position, glm::vec2 size)
             : m_texture(std::move(texture)), m_position(position), m_size(size), m_color(glm::vec3(1.0f)),
               m_uvCoords(0, 0, 1, 1) {
-        setupMesh();
+        ensureMesh();
     }
 
     Sprite::Sprite(std::shared_ptr<Texture> texture, glm::vec2 position, glm::vec2 size, int row, int column,
@@ -32,7 +33,7 @@ namespace GameObjects {
                 (row + 1) * frameHeight
         );
 
-        setupMesh();
+        ensureMesh();
     }
 
     Sprite::~Sprite() {
@@ -43,33 +44,41 @@ namespace GameObjects {
         if (m_uvCoords != newUV) {
             m_uvCoords = newUV;
             m_dirty = true;
-            setupMesh();
+            ensureMesh();
         }
     }
 
     void Sprite::draw() const {
+        ensureMesh();
         if (m_mesh) {
             m_mesh->render();
         }
     }
 
-    void Sprite::setupMesh() {
-        if (!m_dirty) return;
+    std::vector<Vertex> Sprite::buildVertices() const {
         float leftU = m_uvCoords.x;
         float rightU = m_uvCoords.z;
-        std::vector<Vertex> vertices = {
+        return {
                 {{0.0f,     m_size.y}, m_color, {leftU,  m_uvCoords.w}},  // Top-left
                 {{m_size.x, m_size.y}, m_color, {rightU, m_uvCoords.w}},  // Top-right
                 {{m_size.x, 0.0f},     m_color, {rightU, m_uvCoords.y}},  // Bottom-right
                 {{0.0f,     0.0f},     m_color, {leftU,  m_uvCoords.y}}   // Bottom-left
         };
-        std::vector<uint32_t> indices = {0, 1, 2, 2, 3, 0};
-        if (m_texture) {
+    }
+
+    void Sprite::ensureMesh() const {
+        if (!m_mesh) {
+            static const std::vector<uint32_t> indices = {0, 1, 2, 2, 3, 0};
+            auto vertices = buildVertices();
             m_mesh = std::make_shared<Mesh>(vertices, indices, m_texture);
-        } else {
-            m_mesh = std::make_shared<Mesh>(vertices, indices, nullptr);
+            m_dirty = false;
+            return;
         }
-        m_dirty = false;
+        if (m_dirty) {
+            m_mesh->updateVertices(buildVertices());
+            m_mesh->setTexture(m_texture);
+            m_dirty = false;
+        }
     }
 
     void Sprite::setPosition(const glm::vec2 &newPos) {
@@ -80,6 +89,15 @@ namespace GameObjects {
         if (m_size != newSize) {
             m_size = newSize;
             m_dirty = true;
+            ensureMesh();
+        }
+    }
+
+    void Sprite::setTexture(const std::shared_ptr<Texture> &newTexture) {
+        if (m_texture == newTexture) return;
+        m_texture = newTexture;
+        if (m_mesh) {
+            m_mesh->setTexture(m_texture);
         }
     }
 

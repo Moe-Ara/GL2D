@@ -1,5 +1,6 @@
 #include "Mesh.hpp"
 #include <cstddef>
+#include <utility>
 
 namespace GameObjects {
 
@@ -51,12 +52,29 @@ namespace GameObjects {
 
     void Mesh::createVertexBuffer(const std::vector<Vertex>& vertices) {
         glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(vertices.size() * sizeof(Vertex)), vertices.data(), GL_STATIC_DRAW);
+        m_vertexBufferSize = static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex));
+        glBufferData(GL_ARRAY_BUFFER, m_vertexBufferSize, vertices.data(), GL_DYNAMIC_DRAW);
     }
 
     void Mesh::createIndexBuffer(const std::vector<uint32_t>& indices) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizei>(indices.size() * sizeof(uint32_t)), indices.data(), GL_STATIC_DRAW);
+    }
+
+    void Mesh::updateVertices(const std::vector<Vertex> &vertices) {
+        m_vertices = vertices;
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+        auto size = static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex));
+        if (size > m_vertexBufferSize) {
+            m_vertexBufferSize = size;
+            glBufferData(GL_ARRAY_BUFFER, size, vertices.data(), GL_DYNAMIC_DRAW);
+        } else {
+            glBufferSubData(GL_ARRAY_BUFFER, 0, size, vertices.data());
+        }
+    }
+
+    void Mesh::setTexture(std::shared_ptr<Texture> texture) {
+        m_texture = std::move(texture);
     }
 
 } // namespace GameObjects
