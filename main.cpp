@@ -10,12 +10,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "GameObjects/Sprite.hpp"
 #include "Managers/TextureManager.hpp"
-#include "Managers/Animator.hpp"
-#include "Graphics/Animation.hpp"
-#include "Graphics/AnimationState.hpp"
-#include "Managers/AnimationStateMachine.hpp"
+#include "Graphics/Animation/Animator.hpp"
+#include "Graphics/Animation/Animation.hpp"
+#include "Graphics/Animation/AnimationState.hpp"
+#include "Graphics/Animation/AnimationStateMachine.hpp"
 #include "Graphics/Shader.hpp"
-#include "Graphics/Frame.hpp"
+#include "Graphics/Animation/Frame.hpp"
 #include "Loaders/AnimationMetadataLoader.hpp"
 
 struct AnimationLoadResult {

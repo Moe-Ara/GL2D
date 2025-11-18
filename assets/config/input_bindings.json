@@ -1,0 +1,32 @@
+{
+  "actions": [
+    { "name": "MoveLeft",  "type": "button", "description": "Character strafe left" },
+    { "name": "MoveRight", "type": "button" },
+    { "name": "Jump",      "type": "button" },
+    { "name": "BlinkTrigger", "type": "button", "animationCondition": "triggerBlink" }
+  ],
+
+  "commands": [
+    { "name": "CmdJump",        "action": "Jump" },
+    { "name": "CmdBlinkSignal", "action": "BlinkTrigger", "params": { "condition": "triggerBlink" } }
+  ],
+
+  "profiles": [
+    {
+      "name": "keyboard_mouse",
+      "bindings": [
+        { "device": "keyboard", "control": "KEY_A", "action": "MoveLeft" },
+        { "device": "keyboard", "control": "KEY_D", "action": "MoveRight" },
+        { "device": "keyboard", "control": "KEY_SPACE", "action": "Jump" },
+        { "device": "mouse",    "control": "BUTTON_LEFT", "action": "BlinkTrigger" }
+      ]
+    },
+    {
+      "name": "gamepad",
+      "bindings": [
+        { "device": "gamepad", "control": "BUTTON_A",      "action": "Jump" },
+        { "device": "gamepad", "control": "BUTTON_X",      "action": "BlinkTrigger" }
+      ]
+    }
+  ]
+}

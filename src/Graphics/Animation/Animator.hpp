@@ -8,7 +8,7 @@
 #include <functional>
 #include <memory>
 #include "GameObjects/Sprite.hpp"
-#include "Graphics/Animation.hpp"
+#include "Animation.hpp"
 
 namespace Managers {
 
