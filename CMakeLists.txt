@@ -44,18 +44,31 @@ add_executable(${PROJECT_NAME} main.cpp ${SOURCES}
         src/Managers/TextureManager.hpp
         src/GameObjects/Sprite.cpp
         src/GameObjects/Sprite.hpp
-        src/Graphics/Frame.hpp
-        src/Graphics/Animation.cpp
-        src/Graphics/Animation.hpp
-        src/Managers/Animator.cpp
-        src/Managers/Animator.hpp
+        src/Graphics/Animation/Frame.hpp
+        src/Graphics/Animation/Animation.cpp
+        src/Graphics/Animation/Animation.hpp
+        src/Graphics/Animation/Animator.cpp
+        src/Graphics/Animation/Animator.hpp
         src/Utils/IState.hpp
         src/Utils/IStateMachine.hpp
-        src/Managers/AnimationStateMachine.cpp
-        src/Managers/AnimationStateMachine.hpp
+        src/Graphics/Animation/AnimationStateMachine.cpp
+        src/Graphics/Animation/AnimationStateMachine.hpp
         src/Exceptions/AnimationException.hpp
-        src/Graphics/AnimationState.cpp
-        src/Graphics/AnimationState.hpp)
+        src/Graphics/Animation/AnimationState.cpp
+        src/Graphics/Animation/AnimationState.hpp
+        src/InputSystem/InputService.cpp
+        src/InputSystem/InputService.hpp
+        src/InputSystem/InputBindingsLoader.cpp
+        src/InputSystem/InputBindingsLoader.hpp
+        src/InputSystem/InputTypes.hpp
+        src/InputSystem/InputEventBus.cpp
+        src/InputSystem/InputEventBus.hpp
+        src/InputSystem/InputCommandRegistry.cpp
+        src/InputSystem/InputCommandRegistry.hpp
+        src/Graphics/Animation/IAnimationConditionSink.hpp
+        src/InputSystem/Commands/JumpCommand.cpp
+        src/InputSystem/Commands/JumpCommand.hpp
+)
 
 # Copy shaders to build directory
 file(COPY ${SHADERS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
