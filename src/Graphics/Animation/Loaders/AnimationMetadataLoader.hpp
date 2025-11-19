@@ -7,7 +7,7 @@
 
 #include <glm/vec4.hpp>
 
-#include "Graphics/Animation.hpp"
+#include "Graphics/Animation/Animation.hpp"
 #include "Utils/SimpleJson.hpp"
 
 namespace Loaders {

@@ -68,6 +68,12 @@ add_executable(${PROJECT_NAME} main.cpp ${SOURCES}
         src/Graphics/Animation/IAnimationConditionSink.hpp
         src/InputSystem/Commands/JumpCommand.cpp
         src/InputSystem/Commands/JumpCommand.hpp
+        src/Engine/PlayerController.hpp
+        src/Engine/IController.hpp
+        src/GameObjects/Entity.cpp
+        src/GameObjects/Entity.hpp
+        src/GameObjects/Entity.hpp
+        src/Engine/PlayerController.cpp
 )
 
 # Copy shaders to build directory
