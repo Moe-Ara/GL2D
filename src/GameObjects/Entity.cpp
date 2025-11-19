@@ -34,6 +34,7 @@ void Entity::update(double deltaTime) {
   if (m_animator) {
     m_animator->update(deltaTime);
   }
+    tickComponents(deltaTime);
 }
 
 void Entity::tickComponents(double deltaTime) {

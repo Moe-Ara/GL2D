@@ -88,5 +88,4 @@ void PlayerController::update(Entity &entity, double deltaTime) {
     if (sprite) {
         sprite->setPosition(position);
     }
-    entity.tickComponents(deltaTime);
 }

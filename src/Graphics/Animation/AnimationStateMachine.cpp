@@ -4,6 +4,7 @@
 
 #include "AnimationStateMachine.hpp"
 #include "Exceptions/AnimationException.hpp"
+#include "AnimationState.hpp"
 
 namespace Graphics {
 AnimationStateMachine::AnimationStateMachine() {}
