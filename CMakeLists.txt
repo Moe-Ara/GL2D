@@ -75,6 +75,10 @@ add_executable(${PROJECT_NAME} main.cpp ${SOURCES}
         src/GameObjects/Entity.hpp
         src/Engine/PlayerController.cpp
         src/Graphics/Camera/Camera.hpp
+        src/Graphics/Camera/Camera.cpp
+        src/Graphics/Camera/ICameraEffect.hpp
+        src/Graphics/Camera/CameraEvent.hpp
+        src/Graphics/Camera/Events/ScreenShakeEffect.hpp
 )
 
 # Copy shaders to build directory
