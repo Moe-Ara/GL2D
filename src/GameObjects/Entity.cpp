@@ -5,6 +5,7 @@
 #include "Entity.hpp"
 #include "Engine/IController.hpp"
 #include "Utils/EntityAttributes.hpp"
+#include "Utils/Transform.hpp"
 Entity::~Entity() = default;
 
 void Entity::setController(IController *controller) {
@@ -24,7 +25,8 @@ Graphics::Animator *Entity::getAnimator() const { return m_animator; }
 Graphics::AnimationStateMachine *Entity::getAnimationSM() const {
   return m_animSM;
 }
-
+Transform &Entity::getTransform() { return m_transform; }
+const Transform &Entity::getTransform() const { return m_transform; }
 void Entity::update(double deltaTime) {
   if (m_controller) {
     m_controller->update(*this, deltaTime);
@@ -36,13 +38,16 @@ void Entity::update(double deltaTime) {
 
 void Entity::tickComponents(double deltaTime) {
   for (const auto &entry : m_components) {
-    if (auto *updatable = dynamic_cast<IUpdatableComponent *>(entry.second.get())) {
+    if (auto *updatable =
+            dynamic_cast<IUpdatableComponent *>(entry.second.get())) {
       updatable->update(*this, deltaTime);
     }
   }
 }
 
 void Entity::render() {
-  if (m_sprite)
+  if (m_sprite) {
+    m_sprite->setPosition(m_transform.Position);
     m_sprite->draw();
+  }
 }

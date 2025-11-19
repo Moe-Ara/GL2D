@@ -35,9 +35,7 @@ void PlayerController::consumeActionEvent(const ActionEvent &event) {
 
 void PlayerController::update(Entity &entity, double deltaTime) {
     auto *sprite = entity.getSprite();
-    if (!sprite) {
-        return;
-    }
+    auto &transform = entity.getTransform();
 
     const auto &actionEvents = m_inputService.getActionEvents();
     for (const auto &event: actionEvents) {
@@ -45,7 +43,7 @@ void PlayerController::update(Entity &entity, double deltaTime) {
     }
 
     if (!m_groundInitialized) {
-        m_groundLevel = sprite->getPosition().y;
+        m_groundLevel = transform.Position.y;
         m_groundInitialized = true;
     }
 
@@ -77,7 +75,7 @@ void PlayerController::update(Entity &entity, double deltaTime) {
         m_velocity.y -= m_gravity * dtf;
     }
 
-    glm::vec2 position = sprite->getPosition();
+    glm::vec2 position = transform.Position;
     position += m_velocity * dtf;
 
     if (position.y <= m_groundLevel) {
@@ -86,6 +84,9 @@ void PlayerController::update(Entity &entity, double deltaTime) {
         m_isGrounded = true;
     }
 
-    sprite->setPosition(position);
+    transform.setPos(position);
+    if (sprite) {
+        sprite->setPosition(position);
+    }
     entity.tickComponents(deltaTime);
 }
