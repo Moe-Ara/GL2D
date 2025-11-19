@@ -74,6 +74,7 @@ add_executable(${PROJECT_NAME} main.cpp ${SOURCES}
         src/GameObjects/Entity.hpp
         src/GameObjects/Entity.hpp
         src/Engine/PlayerController.cpp
+        src/Graphics/Camera/Camera.hpp
 )
 
 # Copy shaders to build directory

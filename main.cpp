@@ -135,8 +135,8 @@ int main() {
   const auto &animations = animationResult.animations;
   auto sprite = std::make_shared<GameObjects::Sprite>(
       nullptr, glm::vec2(400, 300), glm::vec2(128, 256));
-  auto animator = std::make_shared<Managers::Animator>(sprite);
-  auto stateMachine = std::make_shared<Managers::AnimationStateMachine>();
+  auto animator = std::make_shared<Graphics::Animator>(sprite);
+  auto stateMachine = std::make_shared<Graphics::AnimationStateMachine>();
 
   // Create Animation States
   bool initialStateSet = false;
