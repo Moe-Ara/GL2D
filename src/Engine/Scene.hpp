@@ -25,7 +25,6 @@ public:
     void destroyEntity(Entity& entity);
     void clear();
     void update(float deltaTime);
-    void render();
     std::vector<std::unique_ptr<Entity>>& getEntities();
     const std::vector<std::unique_ptr<Entity>>& getEntities() const;
 private:

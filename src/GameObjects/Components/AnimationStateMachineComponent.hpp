@@ -7,9 +7,7 @@
 
 
 #include "GameObjects/IComponent.hpp"
-namespace Graphics {
-class AnimationStateMachine;
-}
+#include "Graphics/Animation/AnimationStateMachine.hpp"
 
 class AnimationStateMachineComponent: public IUpdatableComponent{
 public:

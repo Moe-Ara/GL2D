@@ -24,7 +24,9 @@ file(GLOB_RECURSE SOURCES "${SRC_DIR}/*.cpp")
 file(GLOB_RECURSE HEADERS "${SRC_DIR}/*.hpp" "${SRC_DIR}/*.h")
 
 # Executable
-add_executable(${PROJECT_NAME} main.cpp ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} main.cpp ${SOURCES} ${HEADERS}
+        src/RenderingSystem/Renderer.cpp
+        src/RenderingSystem/Renderer.hpp)
 
 file(COPY ${SHADERS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${RES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

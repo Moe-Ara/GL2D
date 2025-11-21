@@ -35,8 +35,6 @@ public:
 
     void update(double dt);
 
-    void render();
-
 private:
     std::vector<std::unique_ptr<IComponent>> m_components{};
 };

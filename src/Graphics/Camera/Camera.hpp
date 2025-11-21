@@ -59,7 +59,11 @@ public:
     void setLookAheadSmoothing(float smoothing);
     void setFollowMode(CameraFollowMode mode);
 
-    const glm::mat4 &getViewProjection();
+    const glm::mat4 & getViewProjection();
+
+    // Returns world-space view bounds as (minX, minY, maxX, maxY).
+    // paddingFactor expands half-extents by this fraction of the current half-extents.
+    glm::vec4 getViewBounds(float paddingFactor = 0.0f) const;
 
     glm::vec2 screenToWorld(const glm::vec2 &screenPoint);
     glm::vec2 worldToScreen(const glm::vec2 &worldPoint);

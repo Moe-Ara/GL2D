@@ -10,8 +10,7 @@
 #include <unordered_map>
 #include <glm/vec2.hpp>
 #include "Prefab.hpp"
-
-class Entity;
+#include "GameObjects/Entity.hpp"
 
 class PrefabFactory {
 public:

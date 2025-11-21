@@ -5,8 +5,8 @@
 #include "Graphics/Animation/Animator.hpp"
 #include "Graphics/Animation/Frame.hpp"
 #include "Graphics/Animation/Loaders/AnimationMetadataLoader.hpp"
-#include "Graphics/Shader.hpp"
 #include "Managers/TextureManager.hpp"
+#include "RenderingSystem/Renderer.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <functional>
@@ -122,12 +122,7 @@ int main() {
     return -1;
   }
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-
-  auto shader = std::make_shared<Graphics::Shader>("shaders/vertex.vert",
-                                                   "shaders/fragment.frag");
+  Rendering::Renderer renderer("Shaders/vertex.vert", "Shaders/fragment.frag");
   glm::mat4 projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
 
   auto animationResult =
@@ -235,18 +230,8 @@ int main() {
     float deltaTime = static_cast<float>(currentTime - lastTime);
     lastTime = currentTime;
 
-    glClear(GL_COLOR_BUFFER_BIT);
-    shader->enable();
-    shader->setUniformMat4("projection", projection);
-
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(sprite->getPosition(), 0.0f));
-    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-
-    shader->setUniformMat4("m_transform", model);
-    glActiveTexture(GL_TEXTURE0);
-
-    shader->setUniformInt1("spriteTexture", 0);
 
     blinkAccumulator += deltaTime;
     auto currentAnimation = animator->getCurrentAnimation();
@@ -258,7 +243,9 @@ int main() {
     }
 
     stateMachine->update(deltaTime);
-    sprite->draw();
+    renderer.beginFrame(projection, {0.2f, 0.3f, 0.3f, 1.0f});
+    renderer.submitSprite(*sprite, model);
+    renderer.endFrame();
 
     glfwSwapBuffers(window);
     glfwPollEvents();

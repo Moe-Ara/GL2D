@@ -3,10 +3,8 @@
 
 #include <string>
 #include <GL/glew.h>
-#include "Managers/TextureManager.hpp"
-namespace Managers {
-    class TextureManager;
-}
+
+namespace Managers { class TextureManager; }
 namespace GameObjects {
 
     class Texture {

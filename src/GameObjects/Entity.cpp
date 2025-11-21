@@ -20,11 +20,3 @@ const std::vector<std::unique_ptr<IComponent>> &Entity::components() const {
     return m_components;
 
 }
-
-void Entity::render() {
-    for (auto &c: m_components) {
-        if (auto *renderable = dynamic_cast<IRenderableComponent *>(c.get())) {
-            renderable->render(*this);
-        }
-    }
-}

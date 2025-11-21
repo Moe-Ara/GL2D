@@ -5,11 +5,5 @@
 #include "SpriteComponent.hpp"
 #include "GameObjects/Sprite.hpp"
 
-SpriteComponent::SpriteComponent(GameObjects::Sprite *sprite)
-    : m_sprite(sprite) {}
-
-void SpriteComponent::render(Entity &/*owner*/) {
-    if (m_sprite) {
-        m_sprite->draw();
-    }
-}
+SpriteComponent::SpriteComponent(GameObjects::Sprite *sprite, int zIndex)
+    : m_sprite(sprite), m_zIndex(zIndex) {}

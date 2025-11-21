@@ -36,12 +36,6 @@ void Scene::update(float deltaTime) {
     }
 }
 
-void Scene::render() {
-    for(auto& e: m_entities){
-        e->render();
-    }
-}
-
 std::vector<std::unique_ptr<Entity>> &Scene::getEntities() {
     return m_entities;
 }

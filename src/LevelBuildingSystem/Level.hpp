@@ -9,8 +9,7 @@
 #include <vector>
 #include <string>
 #include "LevelSchema.hpp"
-
-class Entity;
+#include "GameObjects/Entity.hpp"
 
 struct Level {
     std::string id;
