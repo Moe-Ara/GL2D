@@ -6,49 +6,25 @@
 #include "Engine/IController.hpp"
 #include "Utils/EntityAttributes.hpp"
 #include "Utils/Transform.hpp"
-Entity::~Entity() = default;
 
-void Entity::setController(IController *controller) {
-  if (controller == nullptr) {
-    return;
-  }
-  m_controller = controller;
-}
-const EntityAttributes &Entity::getAttributes() const { return m_attributes; }
-EntityAttributes &Entity::getAttributes() { return m_attributes; }
-IController *Entity::getController() const { return m_controller; }
 
-GameObjects::Sprite *Entity::getSprite() const { return m_sprite; }
-
-Graphics::Animator *Entity::getAnimator() const { return m_animator; }
-
-Graphics::AnimationStateMachine *Entity::getAnimationSM() const {
-  return m_animSM;
-}
-Transform &Entity::getTransform() { return m_transform; }
-const Transform &Entity::getTransform() const { return m_transform; }
 void Entity::update(double deltaTime) {
-  if (m_controller) {
-    m_controller->update(*this, deltaTime);
-  }
-  if (m_animator) {
-    m_animator->update(deltaTime);
-  }
-    tickComponents(deltaTime);
+    for (auto &c: m_components) {
+        if (auto *updatable = dynamic_cast<IUpdatableComponent *>(c.get())) {
+            updatable->update(*this, deltaTime);
+        }
+    }
 }
 
-void Entity::tickComponents(double deltaTime) {
-  for (const auto &entry : m_components) {
-    if (auto *updatable =
-            dynamic_cast<IUpdatableComponent *>(entry.second.get())) {
-      updatable->update(*this, deltaTime);
-    }
-  }
+const std::vector<std::unique_ptr<IComponent>> &Entity::components() const {
+    return m_components;
+
 }
 
 void Entity::render() {
-  if (m_sprite) {
-    m_sprite->setPosition(m_transform.Position);
-    m_sprite->draw();
-  }
+    for (auto &c: m_components) {
+        if (auto *renderable = dynamic_cast<IRenderableComponent *>(c.get())) {
+            renderable->render(*this);
+        }
+    }
 }

@@ -1,5 +1,5 @@
-#ifndef GL2D_COMPONENT_HPP
-#define GL2D_COMPONENT_HPP
+#ifndef GL2D_ICOMPONENT_HPP
+#define GL2D_ICOMPONENT_HPP
 
 class Entity;
 
@@ -13,5 +13,9 @@ public:
     ~IUpdatableComponent() override = default;
     virtual void update(Entity &owner, double dt) = 0;
 };
-
-#endif // GL2D_COMPONENT_HPP
+class IRenderableComponent : public IComponent {
+public:
+    ~IRenderableComponent() override = default;
+    virtual void render(Entity& owner) = 0;
+};
+#endif // GL2D_ICOMPONENT_HPP

@@ -1,98 +1,68 @@
-//
-// Created by Mohamad on 19/11/2025.
-//
-
+// GameObjects/Entity.hpp
 #ifndef GL2D_ENTITY_HPP
 #define GL2D_ENTITY_HPP
 
+#include <vector>
 #include <memory>
 #include <type_traits>
-#include <typeindex>
-#include <unordered_map>
-#include <utility>
-
-#include "GameObjects/Component.hpp"
-#include "GameObjects/Sprite.hpp"
-#include "Graphics/Animation/AnimationStateMachine.hpp"
-#include "Graphics/Animation/Animator.hpp"
-#include "Utils/EntityAttributes.hpp"
-#include "Utils/Transform.hpp"
-
-class IController;
+#include "GameObjects/IComponent.hpp"
 
 class Entity {
 public:
-  Entity(EntityAttributes attributes, Transform transform,
-         GameObjects::Sprite *sprite, Graphics::Animator *animator = nullptr,
-         Graphics::AnimationStateMachine *animSM = nullptr)
-      : m_attributes(attributes), m_sprite(sprite), m_animator(animator),
-        m_animSM(animSM), m_transform(transform) {}
+    Entity() = default;
 
-  virtual ~Entity();
+    ~Entity() = default;
 
-  Entity(const Entity &other) = delete;
-  Entity &operator=(const Entity &other) = delete;
-  Entity(Entity &&other) = delete;
-  Entity &operator=(Entity &&other) = delete;
+    Entity(const Entity &) = delete;
 
-  void setController(IController *controller);
-  IController *getController() const;
-  GameObjects::Sprite *getSprite() const;
-  Graphics::Animator *getAnimator() const;
-  Graphics::AnimationStateMachine *getAnimationSM() const;
-  const EntityAttributes &getAttributes() const;
-  EntityAttributes &getAttributes();
-  Transform &getTransform();
-  const Transform &getTransform() const;
-  template <typename TComponent, typename... TArgs>
-  TComponent &addComponent(TArgs &&...args) {
-    static_assert(std::is_base_of<IComponent, TComponent>::value,
-                  "TComponent must derive from IComponent");
-    auto component = std::make_unique<TComponent>(std::forward<TArgs>(args)...);
-    auto *ptr = component.get();
-    m_components[std::type_index(typeid(TComponent))] = std::move(component);
-    return *ptr;
-  }
+    Entity &operator=(const Entity &) = delete;
 
-  template <typename TComponent> TComponent *getComponent() {
-    static_assert(std::is_base_of<IComponent, TComponent>::value,
-                  "TComponent must derive from IComponent");
-    auto it = m_components.find(std::type_index(typeid(TComponent)));
-    if (it == m_components.end()) {
-      return nullptr;
-    }
-    return static_cast<TComponent *>(it->second.get());
-  }
+    Entity(Entity &&) = delete;
 
-  template <typename TComponent> const TComponent *getComponent() const {
-    static_assert(std::is_base_of<IComponent, TComponent>::value,
-                  "TComponent must derive from IComponent");
-    auto it = m_components.find(std::type_index(typeid(TComponent)));
-    if (it == m_components.end()) {
-      return nullptr;
-    }
-    return static_cast<const TComponent *>(it->second.get());
-  }
+    Entity &operator=(Entity &&) = delete;
 
-  template <typename TComponent> bool hasComponent() const {
-    static_assert(std::is_base_of<IComponent, TComponent>::value,
-                  "TComponent must derive from IComponent");
-    return m_components.find(std::type_index(typeid(TComponent))) !=
-           m_components.end();
-  }
 
-  virtual void update(double deltaTime);
-  void tickComponents(double deltaTime);
-  virtual void render();
+    template<typename T, typename... Args>
+    T &addComponent(Args &&... args);
+
+    template<typename T>
+    T *getComponent();
+
+    void addComponent(std::unique_ptr<IComponent> component);
+
+    [[nodiscard]] const std::vector<std::unique_ptr<IComponent>> &components() const;
+
+
+    void update(double dt);
+
+    void render();
 
 private:
-  GameObjects::Sprite *m_sprite = nullptr;
-  Graphics::Animator *m_animator = nullptr;
-  Graphics::AnimationStateMachine *m_animSM = nullptr;
-  IController *m_controller = nullptr;
-  EntityAttributes m_attributes{};
-  std::unordered_map<std::type_index, std::unique_ptr<IComponent>> m_components;
-  Transform m_transform;
+    std::vector<std::unique_ptr<IComponent>> m_components{};
 };
+
+template<typename T, typename... Args>
+T &Entity::addComponent(Args &&... args) {
+    static_assert(std::is_base_of_v<IComponent, T>, "T must derive from IComponent");
+    auto comp = std::make_unique<T>(std::forward<Args>(args)...);
+    T &ref = *comp;
+    m_components.push_back(std::move(comp));
+    return ref;
+}
+
+template<typename T>
+T *Entity::getComponent() {
+    static_assert(std::is_base_of_v<IComponent, T>, "T must derive from IComponent");
+    for (auto &c: m_components) {
+        if (auto *casted = dynamic_cast<T *>(c.get())) {
+            return casted;
+        }
+    }
+    return nullptr;
+}
+
+inline void Entity::addComponent(std::unique_ptr<IComponent> component) {
+    m_components.push_back(std::move(component));
+}
 
 #endif // GL2D_ENTITY_HPP

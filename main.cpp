@@ -243,7 +243,7 @@ int main() {
     model = glm::translate(model, glm::vec3(sprite->getPosition(), 0.0f));
     model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 
-    shader->setUniformMat4("transform", model);
+    shader->setUniformMat4("m_transform", model);
     glActiveTexture(GL_TEXTURE0);
 
     shader->setUniformInt1("spriteTexture", 0);
