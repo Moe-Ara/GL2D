@@ -24,64 +24,8 @@ file(GLOB_RECURSE SOURCES "${SRC_DIR}/*.cpp")
 file(GLOB_RECURSE HEADERS "${SRC_DIR}/*.hpp" "${SRC_DIR}/*.h")
 
 # Executable
-add_executable(${PROJECT_NAME} main.cpp ${SOURCES}
-        Testing/testingGameObject.cpp
-        src/Graphics/Window.cpp
-        src/Graphics/Window.hpp
-        src/Exceptions/Gl2DException.hpp
-        src/Exceptions/WindowException.hpp
-        src/Graphics/Shader.cpp
-        src/Graphics/Shader.hpp
-        src/Exceptions/ShaderException.hpp
-        src/GameObjects/Vertex.hpp
-        src/GameObjects/Mesh.cpp
-        src/GameObjects/Mesh.hpp
-        src/GameObjects/Texture.cpp
-        src/GameObjects/Texture.hpp
-        src/third_party/stb/stb_image.cpp
-        src/Exceptions/TextureException.hpp
-        src/Managers/TextureManager.cpp
-        src/Managers/TextureManager.hpp
-        src/GameObjects/Sprite.cpp
-        src/GameObjects/Sprite.hpp
-        src/Graphics/Animation/Frame.hpp
-        src/Graphics/Animation/Animation.cpp
-        src/Graphics/Animation/Animation.hpp
-        src/Graphics/Animation/Animator.cpp
-        src/Graphics/Animation/Animator.hpp
-        src/Utils/IState.hpp
-        src/Utils/IStateMachine.hpp
-        src/Graphics/Animation/AnimationStateMachine.cpp
-        src/Graphics/Animation/AnimationStateMachine.hpp
-        src/Exceptions/AnimationException.hpp
-        src/Graphics/Animation/AnimationState.cpp
-        src/Graphics/Animation/AnimationState.hpp
-        src/InputSystem/InputService.cpp
-        src/InputSystem/InputService.hpp
-        src/InputSystem/InputBindingsLoader.cpp
-        src/InputSystem/InputBindingsLoader.hpp
-        src/InputSystem/InputTypes.hpp
-        src/InputSystem/InputEventBus.cpp
-        src/InputSystem/InputEventBus.hpp
-        src/InputSystem/InputCommandRegistry.cpp
-        src/InputSystem/InputCommandRegistry.hpp
-        src/Graphics/Animation/IAnimationConditionSink.hpp
-        src/InputSystem/Commands/JumpCommand.cpp
-        src/InputSystem/Commands/JumpCommand.hpp
-        src/Engine/PlayerController.hpp
-        src/Engine/IController.hpp
-        src/GameObjects/Entity.cpp
-        src/GameObjects/Entity.hpp
-        src/GameObjects/Entity.hpp
-        src/Engine/PlayerController.cpp
-        src/Graphics/Camera/Camera.hpp
-        src/Graphics/Camera/Camera.cpp
-        src/Graphics/Camera/ICameraEffect.hpp
-        src/Graphics/Camera/CameraEvent.hpp
-        src/Graphics/Camera/Events/ScreenShakeEffect.hpp
-)
+add_executable(${PROJECT_NAME} main.cpp ${SOURCES} ${HEADERS})
 
-# Copy shaders to build directory
 file(COPY ${SHADERS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${RES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 # Copy models to build directory
