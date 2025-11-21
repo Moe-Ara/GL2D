@@ -21,15 +21,13 @@ public:
   Sprite(std::shared_ptr<Texture> texture, glm::vec2 position, glm::vec2 size,
          int row, int column, int totalRows, int totalCols);
 
-  virtual ~Sprite();
+  virtual ~Sprite() = default;
 
   // Delete copy & move constructors
   Sprite(const Sprite &other) = delete;
   Sprite &operator=(const Sprite &other) = delete;
   Sprite(Sprite &&other) = delete;
   Sprite &operator=(Sprite &&other) = delete;
-
-  void draw() const;
 
   // Setters
   void setPosition(const glm::vec2 &newPos);
@@ -42,19 +40,16 @@ public:
   const glm::vec4 &getUVCoords() const;
   const glm::vec2 &getSize() const;
   const glm::vec2 &getPosition() const;
+  const std::shared_ptr<Texture>& getTexture() const { return m_texture; }
 
   bool hasTexture() const;
 
 private:
-  mutable std::shared_ptr<Mesh> m_mesh;
   std::shared_ptr<Texture> m_texture;
   glm::vec2 m_position{};
   glm::vec2 m_size{};
   glm::vec4 m_uvCoords{};
   glm::vec3 m_color{};
-  mutable bool m_dirty{true};
-  void ensureMesh() const;
-  std::vector<Vertex> buildVertices() const;
 };
 
 } // namespace GameObjects

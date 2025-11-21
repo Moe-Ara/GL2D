@@ -209,7 +209,7 @@ void Camera::updateEffects(double deltaTime) {
     m_dirty=true;
 }
 
-const glm::mat4 &Camera::getViewProjection() {
+const glm::mat4 & Camera::getViewProjection() {
     if (m_dirty)
         recalcViewProjection();
     return m_viewProjection;
@@ -282,4 +282,12 @@ glm::vec2 Camera::clampToWorldBounds(const glm::vec2 &position) const {
 glm::vec2 Camera::computeHalfViewSize() const {
     const float appliedZoom = std::max(0.01f, m_zoom);
     return 0.5f * (m_viewportSize / appliedZoom);
+}
+
+glm::vec4 Camera::getViewBounds(float paddingFactor) const {
+    const glm::vec2 halfView = computeHalfViewSize();
+    const glm::vec2 paddedHalf = halfView * (1.0f + paddingFactor);
+    const glm::vec2 center = m_transform.Position;
+    return glm::vec4(center.x - paddedHalf.x, center.y - paddedHalf.y,
+                     center.x + paddedHalf.x, center.y + paddedHalf.y);
 }

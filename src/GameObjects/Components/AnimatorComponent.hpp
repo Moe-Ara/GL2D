@@ -7,9 +7,7 @@
 
 
 #include "GameObjects/IComponent.hpp"
-namespace Graphics {
-class Animator;
-}
+#include "Graphics/Animation/Animator.hpp"
 
 class AnimatorComponent : public IUpdatableComponent{
 public:

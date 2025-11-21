@@ -11,8 +11,7 @@
 #include <glm/vec2.hpp>
 #include "GameObjects/Prefabs/Prefab.hpp"
 #include "GameObjects/Prefabs/PrefabFactory.hpp"
-
-class Entity;
+#include "GameObjects/Entity.hpp"
 
 struct PlacedEntitySpec {
     std::string prefabId;

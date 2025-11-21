@@ -8,9 +8,6 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
-namespace GameObjects {
-    class Texture;
-}
 namespace Managers {
 
     class TextureManager {

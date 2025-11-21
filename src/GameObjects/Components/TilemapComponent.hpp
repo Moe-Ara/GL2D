@@ -17,7 +17,7 @@ struct TilemapData {
     std::vector<int> tiles; // row-major indices into a tileset atlas
 };
 
-class TilemapComponent : public IRenderableComponent {
+class TilemapComponent : public IComponent {
 public:
     explicit TilemapComponent(std::shared_ptr<TilemapData> data = nullptr, int zIndex = 0, bool collision = false);
     ~TilemapComponent() override = default;
@@ -26,8 +26,6 @@ public:
     TilemapComponent& operator=(const TilemapComponent&) = delete;
     TilemapComponent(TilemapComponent&&) = delete;
     TilemapComponent& operator=(TilemapComponent&&) = delete;
-
-    void render(Entity& owner) override;
 
     void setData(std::shared_ptr<TilemapData> data) { m_data = std::move(data); }
     std::shared_ptr<TilemapData> data() const { return m_data; }
