@@ -25,8 +25,12 @@ file(GLOB_RECURSE HEADERS "${SRC_DIR}/*.hpp" "${SRC_DIR}/*.h")
 
 # Executable
 add_executable(${PROJECT_NAME} main.cpp ${SOURCES} ${HEADERS}
-        src/RenderingSystem/Renderer.cpp
-        src/RenderingSystem/Renderer.hpp)
+        src/Physics/Collision/ACollider.cpp
+        src/Physics/Collision/ICollider.hpp
+        src/Physics/RigidBody.cpp
+        src/Physics/RigidBody.hpp
+        src/GameObjects/Components/RigidBodyComponent.cpp
+        src/GameObjects/Components/RigidBodyComponent.hpp)
 
 file(COPY ${SHADERS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${RES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

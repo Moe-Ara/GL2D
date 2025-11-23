@@ -7,6 +7,10 @@
 #include "Utils/EntityAttributes.hpp"
 #include "Utils/Transform.hpp"
 
+std::atomic<uint64_t> Entity::s_nextId = 1;
+
+Entity::Entity() : m_id{s_nextId.fetch_add(1, std::memory_order_relaxed)} {}
+
 
 void Entity::update(double deltaTime) {
     for (auto &c: m_components) {
