@@ -5,11 +5,13 @@
 #include <vector>
 #include <memory>
 #include <type_traits>
+#include <atomic>
+#include <cstdint>
 #include "GameObjects/IComponent.hpp"
 
 class Entity {
 public:
-    Entity() = default;
+    Entity();
 
     ~Entity() = default;
 
@@ -35,8 +37,12 @@ public:
 
     void update(double dt);
 
+    uint64_t getId() const { return m_id; }
+
 private:
     std::vector<std::unique_ptr<IComponent>> m_components{};
+    uint64_t m_id{0};
+    static std::atomic<uint64_t> s_nextId;
 };
 
 template<typename T, typename... Args>

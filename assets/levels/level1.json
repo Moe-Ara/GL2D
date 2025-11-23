@@ -1,0 +1,178 @@
+{
+  "metadata": {
+    "name": "Level1",
+    "author": "you",
+    "build": "2025-11-21",
+    "schemaVersion": 1
+  },
+  "camera": {
+    "bounds": [
+      -512,
+      -256,
+      4096,
+      1024
+    ],
+    "followMode": "None",
+    "deadZone": [
+      0,
+      0
+    ],
+    "lookAhead": [
+      0,
+      0
+    ]
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "parallax",
+      "texture": "env/bg.png",
+      "scroll": [
+        0.2,
+        0.1
+      ],
+      "zIndex": -10
+    }
+  ],
+  "tileLayers": [
+    {
+      "id": "ground",
+      "tilemapId": "level1_ground",
+      "collision": true,
+      "zIndex": 0,
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "decor",
+      "tilemapId": "level1_decor",
+      "collision": false,
+      "zIndex": -1,
+      "offset": [
+        0,
+        0
+      ]
+    }
+  ],
+  "regions": [
+    {
+      "id": "start_cave",
+      "bounds": [
+        0,
+        0,
+        512,
+        256
+      ],
+      "tint": [
+        0.8,
+        0.85,
+        1.0
+      ],
+      "ambientId": "amb_cave"
+    },
+    {
+      "id": "outside",
+      "bounds": [
+        512,
+        0,
+        4096,
+        1024
+      ],
+      "tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ambientId": "amb_outdoor"
+    }
+  ],
+  "instances": [
+    {
+      "prefabId": "env.tree.pineTall",
+      "pos": [
+        120,
+        64
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rot": 0.0
+    },
+    {
+      "prefabId": "pickup.coin",
+      "pos": [
+        200,
+        128
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rot": 0.0
+    },
+    {
+      "prefabId": "npc.ghost",
+      "pos": [
+        600,
+        180
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rot": 0.0,
+      "overrides": {
+        "Script": {
+          "type": "Script",
+          "strings": {
+            "scriptId": "npc_ghost_intro"
+          }
+        }
+      }
+    }
+  ],
+  "triggers": [
+    {
+      "id": "intro_cam_shake",
+      "shape": {
+        "type": "AABB",
+        "pos": [
+          300,
+          0
+        ],
+        "size": [
+          128,
+          256
+        ]
+      },
+      "event": "camera.shake",
+      "params": {
+        "intensity": 0.6,
+        "duration": 0.5
+      },
+      "activation": "OnEnter"
+    },
+    {
+      "id": "story_beacon",
+      "shape": {
+        "type": "AABB",
+        "pos": [
+          700,
+          0
+        ],
+        "size": [
+          64,
+          256
+        ]
+      },
+      "event": "story.beacon",
+      "params": {
+        "stage": 1
+      },
+      "activation": "Manual"
+    }
+  ]
+}

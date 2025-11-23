@@ -7,6 +7,7 @@
 
 
 #include "GameObjects/Entity.hpp"
+#include "Physics/TriggerSystem.hpp"
 
 class Scene {
 public:
@@ -29,6 +30,7 @@ public:
     const std::vector<std::unique_ptr<Entity>>& getEntities() const;
 private:
     std::vector<std::unique_ptr<Entity>> m_entities;
+    TriggerSystem m_triggerSystem{};
 };
 
 
