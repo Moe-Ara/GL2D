@@ -14,6 +14,7 @@
 #include "Graphics/Camera/Camera.hpp"
 #include "InputSystem/InputService.hpp"
 #include "Managers/TextureManager.hpp"
+#include "Physics/PhysicsUnits.hpp"
 #include "RenderingSystem/RenderSystem.hpp"
 #include "RenderingSystem/Renderer.hpp"
 #include <GL/glew.h>
@@ -129,8 +130,8 @@ public:
         auto velocity = body->getVelocity();
         velocity.x = desiredDir * m_moveSpeed;
 
-        const float groundedPosEpsilon = 5.0f;
-        const float groundedVelEpsilon = 1.5f;
+        const float groundedPosEpsilon = PhysicsUnits::toUnits(0.05f);
+        const float groundedVelEpsilon = PhysicsUnits::toUnits(0.015f);
         const bool grounded = body->getPosition().y <= m_groundY + groundedPosEpsilon &&
                               std::abs(velocity.y) <= groundedVelEpsilon;
         if (jumpPressed && grounded) {
@@ -146,8 +147,8 @@ public:
 private:
     InputService &m_input;
     RigidBodyComponent *m_rigidBody{nullptr};
-    float m_moveSpeed{150.0f};
-    float m_jumpImpulse{1100.0f};
+    float m_moveSpeed{PhysicsUnits::toUnits(1.5f)};
+    float m_jumpImpulse{PhysicsUnits::toUnits(4.8f)};
     float m_groundY{0.0f};
     bool m_moveLeft{false};
     bool m_moveRight{false};
@@ -226,7 +227,12 @@ int main() {
     playerBody->setLinearDamping(6.0f);
     playerBody->setTransform(&playerTransform.getTransform());
     auto &playerRb = player.addComponent<RigidBodyComponent>(std::move(playerBody));
-    player.addComponent<PlayerMover>(inputService, &playerRb, 250.0f, 650.0f, groundTransform.getTransform().Position.y + 80.0f);
+    player.addComponent<PlayerMover>(
+        inputService,
+        &playerRb,
+        PhysicsUnits::toUnits(2.5f),
+        PhysicsUnits::toUnits(4.8f),
+        groundTransform.getTransform().Position.y + PhysicsUnits::toUnits(0.8f));
     playerCollider.ensureCollider(player);
 
     camera.setTarget(&playerTransform.getTransform());

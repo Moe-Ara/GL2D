@@ -10,7 +10,6 @@
 #include "Graphics/Camera/Camera.hpp"
 #include "GameObjects/Components/ColliderComponent.hpp"
 #include "Debug/DebugOverlay.hpp"
-#include <glm/glm.hpp>
 #include "GameObjects/Sprite.hpp"
 #include "RenderingSystem/TilemapRenderer.hpp"
 namespace {
@@ -28,7 +27,7 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
 
     renderer.beginFrame(viewProj, {0.05f, 0.05f, 0.08f, 1.0f});
 
-    TilemapRenderer::render(scene, camera, viewProj);
+    Rendering::TilemapRenderer::render(scene, camera, viewProj);
 
     for (auto &entityPtr : scene.getEntities()) {
         if (!entityPtr) continue;

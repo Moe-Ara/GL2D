@@ -9,6 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include "Physics/PhysicsUnits.hpp"
+
 class Entity;
 class RigidBody;
 class ACollider;
@@ -17,7 +19,7 @@ class ColliderComponent;
 
 class PhysicsEngine {
 public:
-    explicit PhysicsEngine(glm::vec2 gravity = {0.0f, -1400.0f});
+    explicit PhysicsEngine(glm::vec2 gravity = PhysicsUnits::toUnits(glm::vec2{0.0f, -9.81f}));
     ~PhysicsEngine() = default;
 
     PhysicsEngine(const PhysicsEngine&) = delete;

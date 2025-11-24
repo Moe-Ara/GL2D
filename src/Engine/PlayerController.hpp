@@ -7,6 +7,7 @@
 #include "IController.hpp"
 #include "InputSystem/InputService.hpp"
 #include "InputSystem/InputTypes.hpp"
+#include "Physics/PhysicsUnits.hpp"
 
 class PlayerController : public IController {
 public:
@@ -27,11 +28,11 @@ private:
     bool m_moveRight{false};
     bool m_jumpQueued{false};
     bool m_isGrounded{true};
-    float m_moveSpeed{150.0f};
-    float m_acceleration{2000.0f};
-    float m_deceleration{2000.0f};
-    float m_jumpImpulse{550.0f};
-    float m_gravity{1800.0f};
+    float m_moveSpeed{PhysicsUnits::toUnits(1.5f)};
+    float m_acceleration{PhysicsUnits::toUnits(20.0f)};
+    float m_deceleration{PhysicsUnits::toUnits(20.0f)};
+    float m_jumpImpulse{PhysicsUnits::toUnits(4.0f)};
+    float m_gravity{PhysicsUnits::toUnits(9.81f)};
 };
 
 #endif

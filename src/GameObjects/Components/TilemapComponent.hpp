@@ -9,6 +9,7 @@
 #include <glm/vec2.hpp>
 #include <vector>
 #include <memory>
+#include <string>
 
 struct TilemapData {
     int width{0};

@@ -15,7 +15,7 @@
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "Graphics/Shader.hpp"
 #include "Managers/TilesetManager.hpp"
-#include "Managers/Tileset.hpp"
+#include "LevelBuildingSystem/Tileset.hpp"
 #include "GameObjects/Vertex.hpp"
 
 namespace Rendering {
