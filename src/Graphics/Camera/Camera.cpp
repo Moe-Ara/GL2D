@@ -82,16 +82,14 @@ void Camera::followTargetPosition(const glm::vec2 &targetPos, float deltaTime) {
     glm::vec2 camPos = m_transform.Position;
     glm::vec2 desiredPos = camPos;
     const glm::vec2 offset = targetPos - camPos;
+    const bool hardLock = m_followMode == CameraFollowMode::HardLock;
     switch (m_followMode) {
         case CameraFollowMode::CenterOnTarget:
             desiredPos = targetPos;
             break;
         case CameraFollowMode::HardLock:
             desiredPos = clampToWorldBounds(targetPos);
-            m_transform.setPos(desiredPos);
-            m_dirty = true;
-            m_currentLookAhead = glm::vec2(0.0f);
-            return;
+            break;
         case CameraFollowMode::DeadZone:
             if (offset.x > m_deadZoneHalfSize.x)
                 desiredPos.x = (targetPos.x - m_deadZoneHalfSize.x);
@@ -106,7 +104,7 @@ void Camera::followTargetPosition(const glm::vec2 &targetPos, float deltaTime) {
             break;
     }
 
-    if (m_followMode != CameraFollowMode::None) {
+    if (m_followMode != CameraFollowMode::None && !hardLock) {
         glm::vec2 targetVelocity{0.0f};
         const float velocityDt = std::max(0.0001f, deltaTime);
         if (m_hasPrevTargetPos) {
@@ -122,7 +120,9 @@ void Camera::followTargetPosition(const glm::vec2 &targetPos, float deltaTime) {
     }
 
     const float smoothingDt = static_cast<float>(deltaTime);
-    const float smoothingAlpha = 1.0f - std::exp(-m_damping * smoothingDt);
+    const float smoothingAlpha = m_damping <= 0.0f
+                                 ? 1.0f
+                                 : 1.0f - std::exp(-m_damping * smoothingDt);
 
     glm::vec2 smoothedPos = glm::mix(camPos, desiredPos, smoothingAlpha);
     smoothedPos = clampToWorldBounds(smoothedPos);
