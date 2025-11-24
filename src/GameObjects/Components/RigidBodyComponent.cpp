@@ -15,6 +15,12 @@ void RigidBodyComponent::setBody(std::unique_ptr<RigidBody> body) {
     m_bound = false;
 }
 
+void RigidBodyComponent::ensureBound(Entity &owner) {
+    if (!m_bound) {
+        bindOwner(owner);
+    }
+}
+
 void RigidBodyComponent::bindOwner(Entity &owner) {
     if (!m_body || m_bound) {
         return;
@@ -36,9 +42,7 @@ void RigidBodyComponent::update(Entity &owner, double dt) {
         return;
     }
 
-    if (!m_bound) {
-        bindOwner(owner);
-    }
+    ensureBound(owner);
 
-    m_body->integrate(static_cast<float>(dt));
+    // Integration handled by the physics engine; this component just ensures binding.
 }

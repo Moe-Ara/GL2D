@@ -5,8 +5,9 @@
 
 #include "GameObjects/Entity.hpp"
 #include "GameObjects/Sprite.hpp"
+#include "GameObjects/Components/TransformComponent.hpp"
+#include "GameObjects/Components/SpriteComponent.hpp"
 #include "InputSystem/InputTypes.hpp"
-#include "Utils/EntityAttributes.hpp"
 
 namespace {
     constexpr float kAxisEpsilon = 0.001f;
@@ -34,8 +35,14 @@ void PlayerController::consumeActionEvent(const ActionEvent &event) {
 }
 
 void PlayerController::update(Entity &entity, double deltaTime) {
-    auto *sprite = entity.getSprite();
-    auto &transform = entity.getTransform();
+    auto *transformComp = entity.getComponent<TransformComponent>();
+    if (!transformComp) {
+        return;
+    }
+
+    auto *spriteComp = entity.getComponent<SpriteComponent>();
+    auto *sprite = spriteComp ? spriteComp->sprite() : nullptr;
+    auto &transform = transformComp->getTransform();
 
     const auto &actionEvents = m_inputService.getActionEvents();
     for (const auto &event: actionEvents) {
@@ -47,15 +54,14 @@ void PlayerController::update(Entity &entity, double deltaTime) {
         m_groundInitialized = true;
     }
 
-    auto &attr = entity.getAttributes();
     const float dtf = static_cast<float>(deltaTime);
     const float desiredDir = (m_moveRight ? 1.0f : 0.0f) - (m_moveLeft ? 1.0f : 0.0f);
 
     if (std::abs(desiredDir) > kAxisEpsilon) {
-        m_velocity.x += desiredDir * attr.acceleration * dtf;
-        m_velocity.x = std::clamp(m_velocity.x, -attr.moveSpeed, attr.moveSpeed);
+        m_velocity.x += desiredDir * m_acceleration * dtf;
+        m_velocity.x = std::clamp(m_velocity.x, -m_moveSpeed, m_moveSpeed);
     } else {
-        const float decel = attr.deceleration * dtf;
+        const float decel = m_deceleration * dtf;
         if (std::abs(m_velocity.x) <= decel) {
             m_velocity.x = 0.0f;
         } else {

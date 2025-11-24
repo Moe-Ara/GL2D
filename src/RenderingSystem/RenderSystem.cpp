@@ -8,6 +8,8 @@
 #include "GameObjects/Components/SpriteComponent.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "Graphics/Camera/Camera.hpp"
+#include "GameObjects/Components/ColliderComponent.hpp"
+#include "Debug/DebugOverlay.hpp"
 #include <glm/glm.hpp>
 #include "GameObjects/Sprite.hpp"
 namespace {
@@ -23,7 +25,7 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
     const glm::vec4 viewBounds =
         camera.getViewBounds(/*paddingFactor=*/1.0f); // expand by half the view size
 
-    renderer.beginFrame(viewProj);
+    renderer.beginFrame(viewProj, {0.05f, 0.05f, 0.08f, 1.0f});
 
     for (auto &entityPtr : scene.getEntities()) {
         if (!entityPtr) continue;
@@ -49,4 +51,14 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
     }
 
     renderer.endFrame();
+
+    // Debug: draw collider wireframes when overlay is enabled.
+    if (DebugOverlay::enabled()) {
+        for (auto &entityPtr : scene.getEntities()) {
+            if (!entityPtr) continue;
+            auto *colliderComp = entityPtr->getComponent<ColliderComponent>();
+            if (!colliderComp) continue;
+            colliderComp->debugDraw(viewProj, {1.0f, 0.0f, 0.0f});
+        }
+    }
 }

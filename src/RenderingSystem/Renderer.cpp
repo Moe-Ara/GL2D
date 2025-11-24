@@ -25,6 +25,7 @@ inline Vertex makeVertex(const glm::vec2 &pos, const glm::vec3 &color,
 Renderer::Renderer(const std::string &vsPath, const std::string &fsPath)
     : m_shader(std::make_shared<Graphics::Shader>(vsPath, fsPath)) {
   createBuffers();
+  createDefaultTexture();
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
@@ -54,6 +55,10 @@ void Renderer::createBuffers() {
 }
 
 void Renderer::destroyBuffers() {
+  if (m_defaultTexture) {
+    glDeleteTextures(1, &m_defaultTexture);
+    m_defaultTexture = 0;
+  }
   if (m_vbo) {
     glDeleteBuffers(1, &m_vbo);
     m_vbo = 0;
@@ -81,7 +86,7 @@ void Renderer::submitSprite(const GameObjects::Sprite &sprite,
   Quad quad{};
   quad.textureId = sprite.hasTexture() && sprite.getTexture()
                        ? sprite.getTexture()->getID()
-                       : 0;
+                       : m_defaultTexture;
   quad.zIndex = zOrder;
 
   const auto &color = sprite.getColor();
@@ -168,5 +173,17 @@ void Renderer::flush() {
 }
 
 void Renderer::endFrame() { flush(); }
+
+void Renderer::createDefaultTexture() {
+  glGenTextures(1, &m_defaultTexture);
+  glBindTexture(GL_TEXTURE_2D, m_defaultTexture);
+  const unsigned char white[4] = {255, 255, 255, 255};
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
 
 } // namespace Rendering

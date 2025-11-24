@@ -40,6 +40,7 @@ private:
     int zIndex{0};
     Vertex verts[4];
   };
+  void createDefaultTexture();
 
   void createBuffers();
   void destroyBuffers();
@@ -47,6 +48,7 @@ private:
 
   std::shared_ptr<Graphics::Shader> m_shader;
   GLuint m_vao{}, m_vbo{}, m_ibo{};
+  GLuint m_defaultTexture{0};
   glm::mat4 m_viewProj{1.0f};
   std::vector<Quad> m_quads;
 };

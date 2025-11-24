@@ -61,9 +61,27 @@ target_link_libraries(${PROJECT_NAME}
 enable_testing()
 
 # Test executable
-add_executable(GL2D_TEST Testing/testingGameObject.cpp
+set(GL2D_TEST_SOURCES
         Testing/testingGameObject.cpp
-        Testing/AnimationMetadataTests.cpp)
+        Testing/AnimationMetadataTests.cpp
+        Testing/SimpleJsonTests.cpp
+        Testing/RigidBodyTests.cpp
+        Testing/InputEventBusTests.cpp
+        Testing/TriggerCollisionTests.cpp
+        src/Utils/SimpleJson.cpp
+        src/Graphics/Animation/Loaders/AnimationMetadataLoader.cpp
+        src/Physics/RigidBody.cpp
+        src/Physics/Collision/ACollider.cpp
+        src/Physics/Collision/CollisionDispatcher.cpp
+        src/Physics/Collision/AABB.cpp
+        src/Physics/Collision/AABBCollider.cpp
+        src/Physics/Collision/CircleCollider.cpp
+        src/Physics/Collision/CapsuleCollider.cpp
+        src/InputSystem/InputEventBus.cpp
+        src/GameObjects/Entity.cpp
+)
+
+add_executable(GL2D_TEST ${GL2D_TEST_SOURCES})
 
 # Include directories for test target
 target_include_directories(GL2D_TEST PRIVATE
