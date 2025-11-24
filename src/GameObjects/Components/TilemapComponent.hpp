@@ -14,6 +14,7 @@ struct TilemapData {
     int width{0};
     int height{0};
     glm::vec2 tileSize{1.0f, 1.0f};
+    std::string tilesetId;
     std::vector<int> tiles; // row-major indices into a tileset atlas
 };
 

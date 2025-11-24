@@ -221,12 +221,13 @@ int main() {
     }
     player.addComponent<SpriteComponent>(playerSprite.get(), 0);
     player.addComponent<AnimatorComponent>(playerAnimator.get());
-    player.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
+    auto &playerCollider = player.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -12.0f);
     auto playerBody = std::make_unique<RigidBody>(1.0f, RigidBodyType::DYNAMIC);
     playerBody->setLinearDamping(6.0f);
     playerBody->setTransform(&playerTransform.getTransform());
     auto &playerRb = player.addComponent<RigidBodyComponent>(std::move(playerBody));
     player.addComponent<PlayerMover>(inputService, &playerRb, 250.0f, 650.0f, groundTransform.getTransform().Position.y + 80.0f);
+    playerCollider.ensureCollider(player);
 
     camera.setTarget(&playerTransform.getTransform());
     camera.setWorldBounds(glm::vec4{-1000.0f, -200.0f, 2000.0f, 800.0f});

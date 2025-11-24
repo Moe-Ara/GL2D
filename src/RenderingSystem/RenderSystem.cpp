@@ -12,6 +12,7 @@
 #include "Debug/DebugOverlay.hpp"
 #include <glm/glm.hpp>
 #include "GameObjects/Sprite.hpp"
+#include "RenderingSystem/TilemapRenderer.hpp"
 namespace {
 inline bool overlaps(const glm::vec4 &aabb, const glm::vec4 &view) {
     return !(aabb.z < view.x || aabb.x > view.z || aabb.w < view.y ||
@@ -26,6 +27,8 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
         camera.getViewBounds(/*paddingFactor=*/1.0f); // expand by half the view size
 
     renderer.beginFrame(viewProj, {0.05f, 0.05f, 0.08f, 1.0f});
+
+    TilemapRenderer::render(scene, camera, viewProj);
 
     for (auto &entityPtr : scene.getEntities()) {
         if (!entityPtr) continue;
