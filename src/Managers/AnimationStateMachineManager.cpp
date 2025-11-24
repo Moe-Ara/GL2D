@@ -4,6 +4,8 @@
 
 #include "AnimationStateMachineManager.hpp"
 
+std::unordered_map<std::string, Graphics::AnimationStateMachine*> AnimationStateMachineManager::m_AnimationSMs{};
+
 void AnimationStateMachineManager::registerAnimationSM(const std::string &id, Graphics::AnimationStateMachine *animSM) {
 m_AnimationSMs[id]=animSM;
 }

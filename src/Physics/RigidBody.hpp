@@ -27,11 +27,14 @@ public:
 
   RigidBody &operator=(RigidBody &&other) = delete;
 
-  void setTransform(Transform *transform) { m_transform = transform; }
+  void setTransform(Transform *transform);
   Transform *getTransform() const { return m_transform; }
 
-  void setCollider(ICollider *collider) { m_collider = collider; }
+  void setCollider(ICollider *collider);
   ICollider *getCollider() const { return m_collider; }
+
+  void setPosition(const glm::vec2 &pos);
+  const glm::vec2 &getPosition() const { return m_position; }
 
   void setMass(float mass);
   float getMass() const { return m_mass; }

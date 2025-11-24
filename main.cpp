@@ -1,17 +1,25 @@
+#include "Engine/Scene.hpp"
+#include "GameObjects/Components/AnimatorComponent.hpp"
+#include "GameObjects/Components/ColliderComponent.hpp"
+#include "GameObjects/Components/RigidBodyComponent.hpp"
+#include "GameObjects/Components/SpriteComponent.hpp"
+#include "GameObjects/Components/TransformComponent.hpp"
+#include "GameObjects/Entity.hpp"
+#include "GameObjects/IComponent.hpp"
 #include "GameObjects/Sprite.hpp"
 #include "Graphics/Animation/Animation.hpp"
-#include "Graphics/Animation/AnimationState.hpp"
-#include "Graphics/Animation/AnimationStateMachine.hpp"
 #include "Graphics/Animation/Animator.hpp"
 #include "Graphics/Animation/Frame.hpp"
 #include "Graphics/Animation/Loaders/AnimationMetadataLoader.hpp"
+#include "Graphics/Camera/Camera.hpp"
+#include "InputSystem/InputService.hpp"
 #include "Managers/TextureManager.hpp"
+#include "RenderingSystem/RenderSystem.hpp"
 #include "RenderingSystem/Renderer.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <functional>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -19,238 +27,247 @@
 #include <vector>
 
 struct AnimationLoadResult {
-  std::map<std::string, std::shared_ptr<Graphics::Animation>> animations;
-  std::string initialState;
+    std::map<std::string, std::shared_ptr<Graphics::Animation>> animations;
+    std::string initialState;
 };
 
-AnimationLoadResult
-loadAnimationsFromMetadata(const std::string &metadataPath) {
-  AnimationLoadResult result{};
-  auto metadata = Loaders::AnimationMetadataLoader::loadFromFile(metadataPath);
-  result.initialState = metadata.initialState;
-  std::unordered_map<std::string, std::shared_ptr<GameObjects::Texture>>
-      textureCache;
-  auto fetchTexture =
-      [&](const std::string &path) -> std::shared_ptr<GameObjects::Texture> {
-    if (path.empty())
-      return nullptr;
-    auto it = textureCache.find(path);
-    if (it != textureCache.end()) {
-      return it->second;
+AnimationLoadResult loadAnimationsFromMetadata(const std::string &metadataPath) {
+    AnimationLoadResult result{};
+    auto metadata = Loaders::AnimationMetadataLoader::loadFromFile(metadataPath);
+    result.initialState = metadata.initialState;
+    std::unordered_map<std::string, std::shared_ptr<GameObjects::Texture>> textureCache;
+    auto fetchTexture = [&](const std::string &path) -> std::shared_ptr<GameObjects::Texture> {
+        if (path.empty())
+            return nullptr;
+        auto it = textureCache.find(path);
+        if (it != textureCache.end()) {
+            return it->second;
+        }
+        auto texture = Managers::TextureManager::loadTexture(path);
+        textureCache[path] = texture;
+        return texture;
+    };
+
+    auto atlasTexture = fetchTexture(metadata.atlas.texturePath);
+
+    for (const auto &entry : metadata.animations) {
+        if (entry.frames.empty()) {
+            continue;
+        }
+
+        const float animationFrameDuration = entry.defaultFrameDuration > 0.0f
+                                                 ? entry.defaultFrameDuration
+                                                 : metadata.defaultFrameDuration;
+
+        auto animation = std::make_shared<Graphics::Animation>(
+                metadata.atlas.rows, metadata.atlas.cols, animationFrameDuration,
+                entry.loop, entry.playbackMode);
+        animation->setName(entry.name);
+        animation->setSharedTexture(atlasTexture);
+        animation->setFrameDuration(animationFrameDuration);
+        for (const auto &transition : entry.transitions) {
+            animation->addTransition(Graphics::AnimationTransition{
+                    transition.target, transition.condition});
+        }
+
+        for (const auto &frameMeta : entry.frames) {
+            Graphics::Frame frame{};
+            frame.row = frameMeta.row;
+            frame.column = frameMeta.column;
+            frame.useCustomUV = frameMeta.useCustomUV;
+            frame.uvRect = frameMeta.uvRect;
+            frame.duration = frameMeta.duration > 0.0f ? frameMeta.duration
+                                                       : animationFrameDuration;
+            frame.eventName = frameMeta.eventName;
+
+            if (!frameMeta.texturePath.empty()) {
+                frame.texture = fetchTexture(frameMeta.texturePath);
+            } else if (atlasTexture) {
+                frame.texture = atlasTexture;
+            } else {
+                frame.texture = nullptr;
+            }
+
+            animation->addFrame(frame);
+        }
+        result.animations[entry.name] = animation;
     }
-    auto texture = Managers::TextureManager::loadTexture(path);
-    textureCache[path] = texture;
-    return texture;
-  };
 
-  auto atlasTexture = fetchTexture(metadata.atlas.texturePath);
-
-  for (const auto &entry : metadata.animations) {
-    if (entry.frames.empty()) {
-      continue;
-    }
-
-    const float animationFrameDuration = entry.defaultFrameDuration > 0.0f
-                                             ? entry.defaultFrameDuration
-                                             : metadata.defaultFrameDuration;
-
-    auto animation = std::make_shared<Graphics::Animation>(
-        metadata.atlas.rows, metadata.atlas.cols, animationFrameDuration,
-        entry.loop, entry.playbackMode);
-    animation->setName(entry.name);
-    animation->setSharedTexture(atlasTexture);
-    animation->setFrameDuration(animationFrameDuration);
-    for (const auto &transition : entry.transitions) {
-      animation->addTransition(Graphics::AnimationTransition{
-          transition.target, transition.condition});
-    }
-
-    for (const auto &frameMeta : entry.frames) {
-      Graphics::Frame frame{};
-      frame.row = frameMeta.row;
-      frame.column = frameMeta.column;
-      frame.useCustomUV = frameMeta.useCustomUV;
-      frame.uvRect = frameMeta.uvRect;
-      frame.duration = frameMeta.duration > 0.0f ? frameMeta.duration
-                                                 : animationFrameDuration;
-      frame.eventName = frameMeta.eventName;
-
-      if (!frameMeta.texturePath.empty()) {
-        frame.texture = fetchTexture(frameMeta.texturePath);
-      } else if (atlasTexture) {
-        frame.texture = atlasTexture;
-      } else {
-        frame.texture = nullptr;
-      }
-
-      if (!frame.texture) {
-        std::cerr << "Warning: Frame in animation '" << entry.name
-                  << "' is missing a texture source." << std::endl;
-      }
-
-      animation->addFrame(frame);
-    }
-    result.animations[entry.name] = animation;
-  }
-
-  return result;
+    return result;
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
-  glViewport(0, 0, width, height);
-}
+class PlayerMover : public IUpdatableComponent {
+public:
+    PlayerMover(InputService &input, RigidBodyComponent *rigidBody, float moveSpeed, float jumpImpulse, float groundY)
+            : m_input(input), m_rigidBody(rigidBody), m_moveSpeed(moveSpeed), m_jumpImpulse(jumpImpulse), m_groundY(groundY) {}
+
+    void update(Entity & /*owner*/, double dt) override {
+        if (!m_rigidBody || !m_rigidBody->body()) {
+            return;
+        }
+
+        bool jumpPressed = false;
+        for (const auto &evt : m_input.getActionEvents()) {
+            const bool pressed = evt.eventType == InputEventType::ButtonPressed;
+            const bool released = evt.eventType == InputEventType::ButtonReleased;
+            if (evt.actionName == "MoveLeft") {
+                if (pressed) m_moveLeft = true;
+                else if (released) m_moveLeft = false;
+            }
+            if (evt.actionName == "MoveRight") {
+                if (pressed) m_moveRight = true;
+                else if (released) m_moveRight = false;
+            }
+            if (evt.actionName == "Jump" && pressed) {
+                jumpPressed = true;
+            }
+        }
+
+        float desiredDir = (m_moveRight ? 1.0f : 0.0f) - (m_moveLeft ? 1.0f : 0.0f);
+
+        auto *body = m_rigidBody->body();
+        auto velocity = body->getVelocity();
+        velocity.x = desiredDir * m_moveSpeed;
+
+        const float groundedPosEpsilon = 5.0f;
+        const float groundedVelEpsilon = 1.5f;
+        const bool grounded = body->getPosition().y <= m_groundY + groundedPosEpsilon &&
+                              std::abs(velocity.y) <= groundedVelEpsilon;
+        if (jumpPressed && grounded) {
+            velocity.y = m_jumpImpulse;
+        } else if (grounded && velocity.y < 0.0f) {
+            // Snap small downward drift to zero when on ground.
+            velocity.y = 0.0f;
+        }
+
+        body->setVelocity(velocity);
+    }
+
+private:
+    InputService &m_input;
+    RigidBodyComponent *m_rigidBody{nullptr};
+    float m_moveSpeed{150.0f};
+    float m_jumpImpulse{1100.0f};
+    float m_groundY{0.0f};
+    bool m_moveLeft{false};
+    bool m_moveRight{false};
+};
 
 int main() {
-  if (!glfwInit()) {
-    std::cerr << "Failed to initialize GLFW!" << std::endl;
-    return -1;
-  }
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW!" << std::endl;
+        return -1;
+    }
 
-  GLFWwindow *window =
-      glfwCreateWindow(800, 600, "Character Animation", nullptr, nullptr);
-  if (!window) {
-    std::cerr << "Failed to create GLFW window!" << std::endl;
+    GLFWwindow *window = glfwCreateWindow(1280, 720, "GL2D Prototype", nullptr, nullptr);
+    if (!window) {
+        std::cerr << "Failed to create GLFW window!" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Failed to initialize GLEW!" << std::endl;
+        return -1;
+    }
+
+    Rendering::Renderer renderer("Shaders/vertex.vert", "Shaders/fragment.frag");
+    Camera camera(1280.0f, 720.0f);
+    camera.setFollowMode(CameraFollowMode::HardLock);
+    camera.setDamping(0.0f);
+
+    InputService inputService;
+    inputService.initialize(window);
+    inputService.loadBindingsFromFile("assets/config/input_bindings.json", "keyboard_mouse");
+
+    Scene scene;
+
+    const auto animResult = loadAnimationsFromMetadata("assets/character/animations.json");
+    std::shared_ptr<Graphics::Animation> startAnimation;
+    if (!animResult.initialState.empty()) {
+        auto it = animResult.animations.find(animResult.initialState);
+        if (it != animResult.animations.end()) {
+            startAnimation = it->second;
+        }
+    }
+    if (!startAnimation && !animResult.animations.empty()) {
+        startAnimation = animResult.animations.begin()->second;
+    }
+
+    // Ground entity (static)
+    Entity &ground = scene.createEntity();
+    auto &groundTransform = ground.addComponent<TransformComponent>();
+    groundTransform.setPosition(glm::vec2{-800.0f, 0.0f});
+    auto groundSprite = std::make_shared<GameObjects::Sprite>(groundTransform.getTransform().Position,
+                                                              glm::vec2{2000.0f, 80.0f},
+                                                              glm::vec3{0.30f, 0.55f, 0.32f});
+    ground.addComponent<SpriteComponent>(groundSprite.get(), -1);
+    ground.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
+    auto groundBody = std::make_unique<RigidBody>(0.0f, RigidBodyType::STATIC);
+    groundBody->setTransform(&groundTransform.getTransform());
+    ground.addComponent<RigidBodyComponent>(std::move(groundBody));
+
+    // Player entity
+    Entity &player = scene.createEntity();
+    auto &playerTransform = player.addComponent<TransformComponent>();
+    playerTransform.setPosition(glm::vec2{100.0f, 150.0f});
+    auto playerSprite = std::make_shared<GameObjects::Sprite>(nullptr, playerTransform.getTransform().Position, glm::vec2{128.0f, 128.0f});
+    auto playerAnimator = std::make_shared<Graphics::Animator>(playerSprite);
+    if (startAnimation) {
+        playerAnimator->play(startAnimation);
+    }
+    player.addComponent<SpriteComponent>(playerSprite.get(), 0);
+    player.addComponent<AnimatorComponent>(playerAnimator.get());
+    player.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
+    auto playerBody = std::make_unique<RigidBody>(1.0f, RigidBodyType::DYNAMIC);
+    playerBody->setLinearDamping(6.0f);
+    playerBody->setTransform(&playerTransform.getTransform());
+    auto &playerRb = player.addComponent<RigidBodyComponent>(std::move(playerBody));
+    player.addComponent<PlayerMover>(inputService, &playerRb, 250.0f, 650.0f, groundTransform.getTransform().Position.y + 80.0f);
+
+    camera.setTarget(&playerTransform.getTransform());
+    camera.setWorldBounds(glm::vec4{-1000.0f, -200.0f, 2000.0f, 800.0f});
+
+    // Background layered parallax to make camera motion obvious.
+    Entity &background = scene.createEntity();
+    auto &bgTransform = background.addComponent<TransformComponent>();
+    bgTransform.setPosition(glm::vec2{-1600.0f, -400.0f});
+    auto bgTex = Managers::TextureManager::loadTexture("assets/BG/bg_sky.png");
+    auto bgSprite = std::make_shared<GameObjects::Sprite>(bgTex,
+                                                          bgTransform.getTransform().Position,
+                                                          glm::vec2{3200.0f, 1800.0f});
+    background.addComponent<SpriteComponent>(bgSprite.get(), -10);
+
+    // Midground band for parallax contrast (solid color).
+    Entity &midground = scene.createEntity();
+    auto &midTransform = midground.addComponent<TransformComponent>();
+    midTransform.setPosition(glm::vec2{-1600.0f, -100.0f});
+    auto midTex = Managers::TextureManager::loadTexture("assets/BG/bg_forest.png");
+    auto midSprite = std::make_shared<GameObjects::Sprite>(midTex,
+                                                           midTransform.getTransform().Position,
+                                                           glm::vec2{3200.0f, 1200.0f});
+    midground.addComponent<SpriteComponent>(midSprite.get(), -9);
+
+    double lastTime = glfwGetTime();
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        inputService.update();
+
+        double currentTime = glfwGetTime();
+        auto deltaTime = static_cast<float>(currentTime - lastTime);
+        lastTime = currentTime;
+
+        // Pull and resolve input for this frame so components can read getActionEvents().
+        inputService.pollEvents();
+
+        scene.updateWorld(deltaTime, camera, renderer);
+
+        glfwSwapBuffers(window);
+    }
+
     glfwTerminate();
-    return -1;
-  }
-  glfwMakeContextCurrent(window);
-  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-  glewExperimental = GL_TRUE;
-  if (glewInit() != GLEW_OK) {
-    std::cerr << "Failed to initialize GLEW!" << std::endl;
-    return -1;
-  }
-
-  Rendering::Renderer renderer("Shaders/vertex.vert", "Shaders/fragment.frag");
-  glm::mat4 projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
-
-  auto animationResult =
-      loadAnimationsFromMetadata("assets/character/animations.json");
-  const auto &animations = animationResult.animations;
-  auto sprite = std::make_shared<GameObjects::Sprite>(
-      nullptr, glm::vec2(400, 300), glm::vec2(128, 256));
-  auto animator = std::make_shared<Graphics::Animator>(sprite);
-  auto stateMachine = std::make_shared<Graphics::AnimationStateMachine>();
-
-  // Create Animation States
-  bool initialStateSet = false;
-  std::unordered_map<std::string, std::shared_ptr<Graphics::AnimationState>>
-      stateLookup;
-  for (const auto &[name, animation] : animations) {
-    auto state =
-        std::make_shared<Graphics::AnimationState>(animation, animator);
-    stateMachine->addState(state);
-    stateLookup[name] = state;
-
-    if (!initialStateSet) {
-      if (!animationResult.initialState.empty() &&
-          name == animationResult.initialState) {
-        stateMachine->setInitialState(state);
-        initialStateSet = true;
-      } else if (animationResult.initialState.empty() &&
-                 name.find("Idle") != std::string::npos) {
-        stateMachine->setInitialState(state);
-        initialStateSet = true;
-      }
-    }
-  }
-
-  if (!initialStateSet && !animations.empty()) {
-    stateMachine->setInitialState(stateLookup.begin()->second);
-  }
-
-  std::unordered_map<std::string, std::shared_ptr<bool>> transitionSignals;
-  auto ensureSignal = [&](const std::string &key) -> std::shared_ptr<bool> {
-    if (key.empty())
-      return nullptr;
-    auto it = transitionSignals.find(key);
-    if (it == transitionSignals.end()) {
-      it = transitionSignals.emplace(key, std::make_shared<bool>(false)).first;
-    }
-    return it->second;
-  };
-
-  auto conditionFactory = [&](const std::string &key) {
-    auto signal = ensureSignal(key);
-    if (!signal) {
-      return std::function<bool()>([] { return false; });
-    }
-    return std::function<bool()>([signal]() {
-      if (*signal) {
-        *signal = false;
-        return true;
-      }
-      return false;
-    });
-  };
-
-  for (const auto &pair : stateLookup) {
-    const auto &state = pair.second;
-    if (!state)
-      continue;
-    auto animation = state->getAnimation();
-    if (!animation)
-      continue;
-    for (const auto &transition : animation->getTransitions()) {
-      auto targetIt = stateLookup.find(transition.target);
-      if (targetIt == stateLookup.end()) {
-        std::cerr << "Warning: Transition target '" << transition.target
-                  << "' not found." << std::endl;
-        continue;
-      }
-      state->addTransition(targetIt->second,
-                           conditionFactory(transition.condition));
-    }
-  }
-
-  auto blinkTriggerSignal = ensureSignal("triggerBlink");
-
-  animator->setFrameEventCallback(
-      [](const std::string &eventName,
-         const std::shared_ptr<Graphics::Animation> &animationPtr,
-         size_t frameIndex) {
-        if (eventName.empty()) {
-          return;
-        }
-        std::cout << "[AnimationEvent] " << eventName << " frame "
-                  << frameIndex;
-        if (animationPtr) {
-          std::cout << " (" << animationPtr->getName() << ")";
-        }
-        std::cout << std::endl;
-      });
-
-  double blinkAccumulator = 0.0;
-  constexpr double blinkInterval = 4.5;
-
-  double lastTime = glfwGetTime();
-  while (!glfwWindowShouldClose(window)) {
-    double currentTime = glfwGetTime();
-    float deltaTime = static_cast<float>(currentTime - lastTime);
-    lastTime = currentTime;
-
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(sprite->getPosition(), 0.0f));
-
-    blinkAccumulator += deltaTime;
-    auto currentAnimation = animator->getCurrentAnimation();
-    if (blinkTriggerSignal && blinkAccumulator >= blinkInterval) {
-      if (currentAnimation && currentAnimation->getName() == "SlimeIdle") {
-        blinkAccumulator = 0.0;
-        *blinkTriggerSignal = true;
-      }
-    }
-
-    stateMachine->update(deltaTime);
-    renderer.beginFrame(projection, {0.2f, 0.3f, 0.3f, 1.0f});
-    renderer.submitSprite(*sprite, model);
-    renderer.endFrame();
-
-    glfwSwapBuffers(window);
-    glfwPollEvents();
-  }
-
-  glfwTerminate();
-  return 0;
+    return 0;
 }

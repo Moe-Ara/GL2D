@@ -30,6 +30,7 @@ public:
 
     RigidBody* body() const { return m_body.get(); }
     void setBody(std::unique_ptr<RigidBody> body);
+    void ensureBound(Entity& owner);
 
 private:
     void bindOwner(Entity &owner);

@@ -14,6 +14,33 @@ RigidBody::RigidBody(float m, RigidBodyType type)
     setMass(m);
 }
 
+void RigidBody::setTransform(Transform *transform) {
+    m_transform = transform;
+    if (m_transform) {
+        m_position = m_transform->Position;
+    }
+    if (m_collider) {
+        m_collider->setTransform(m_transform);
+    }
+}
+
+void RigidBody::setCollider(ICollider *collider) {
+    m_collider = collider;
+    if (m_collider && m_transform) {
+        m_collider->setTransform(m_transform);
+    }
+}
+
+void RigidBody::setPosition(const glm::vec2 &pos) {
+    m_position = pos;
+    if (m_transform) {
+        m_transform->setPos(pos);
+    }
+    if (m_collider) {
+        m_collider->setTransform(m_transform);
+    }
+}
+
 void RigidBody::setMass(float mass) {
     m_mass = mass;
     if (m_bodyType == RigidBodyType::DYNAMIC && mass > 0.0f) {

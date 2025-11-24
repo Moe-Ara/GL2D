@@ -4,4 +4,4 @@
 
 #include "DebugOverlay.hpp"
 
-bool DebugOverlay::s_enabled = false;
+bool DebugOverlay::s_enabled = true;

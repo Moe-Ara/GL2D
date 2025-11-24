@@ -12,8 +12,6 @@ public:
   ColliderType getType() const override;
   AABB getAABB() const override;
 
-  void setTransform(Transform *transform) override { ACollider::setTransform(transform); }
-  const Transform *getTransform() const { return tryGetTransform(); }
   void setLocalBounds(const glm::vec2 &min, const glm::vec2 &max);
 private:
   glm::vec2 m_min{};

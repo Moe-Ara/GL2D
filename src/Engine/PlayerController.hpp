@@ -27,6 +27,9 @@ private:
     bool m_moveRight{false};
     bool m_jumpQueued{false};
     bool m_isGrounded{true};
+    float m_moveSpeed{150.0f};
+    float m_acceleration{2000.0f};
+    float m_deceleration{2000.0f};
     float m_jumpImpulse{550.0f};
     float m_gravity{1800.0f};
 };

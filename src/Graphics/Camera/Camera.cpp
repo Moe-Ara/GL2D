@@ -58,6 +58,11 @@ void Camera::setViewportSize(float width, float height) {
     m_dirty = true;
 }
 
+void Camera::setFollowMode(CameraFollowMode mode) {
+    m_followMode = mode;
+    m_dirty = true;
+}
+
 void Camera::update(double deltaTime) {
     if (m_target) {
         glm::vec2 targetPos = m_target->Position + m_targetOffset;

@@ -3,6 +3,8 @@
 //
 
 #include "Scene.hpp"
+#include "GameObjects/Components/RigidBodyComponent.hpp"
+#include "RenderingSystem/RenderSystem.hpp"
 #include <algorithm>
 
 Scene::Scene() {
@@ -37,7 +39,14 @@ void Scene::update(float deltaTime) {
     for(auto& e: m_entities){
         e->update(deltaTime);
     }
+    m_physicsEngine.step(deltaTime, m_entities);
     m_triggerSystem.update(m_entities);
+}
+
+void Scene::updateWorld(float deltaTime, Camera &camera, Rendering::Renderer &renderer) {
+    update(deltaTime);
+    camera.update(deltaTime);
+    RenderSystem::renderScene(*this, camera, renderer);
 }
 
 std::vector<std::unique_ptr<Entity>> &Scene::getEntities() {
