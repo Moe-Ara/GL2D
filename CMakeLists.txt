@@ -30,7 +30,9 @@ add_executable(${PROJECT_NAME} main.cpp ${SOURCES} ${HEADERS}
         src/Physics/RigidBody.cpp
         src/Physics/RigidBody.hpp
         src/GameObjects/Components/RigidBodyComponent.cpp
-        src/GameObjects/Components/RigidBodyComponent.hpp)
+        src/GameObjects/Components/RigidBodyComponent.hpp
+        src/RenderingSystem/TilemapRenderer.cpp
+        src/RenderingSystem/TilemapRenderer.hpp)
 
 file(COPY ${SHADERS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${RES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
