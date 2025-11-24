@@ -22,6 +22,9 @@ public:
     static void registerTilemap(const std::string& id, std::shared_ptr<TilemapData> data);
     static std::shared_ptr<TilemapData> get(const std::string& id);
     static bool contains(const std::string& id);
+    // Load a tilemap from a simple JSON file:
+    // { "tilesetId": "...", "width": N, "height": M, "tileSize": [w,h], "tiles": [ ...indices... ] }
+    static std::shared_ptr<TilemapData> loadFromFile(const std::string& id, const std::string& path);
 
 private:
     static std::unordered_map<std::string, std::shared_ptr<TilemapData>>& maps();

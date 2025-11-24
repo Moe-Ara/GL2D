@@ -69,16 +69,26 @@ bool ColliderComponent::fitToSprite(Entity &owner, float padding) {
     }
 
     const glm::vec2 size = sprite->getSize();
-    const glm::vec2 pad{padding, padding};
+    const float pad = padding;
 
     if (auto *aabbCollider = dynamic_cast<AABBCollider *>(m_collider.get())) {
-        aabbCollider->setLocalBounds(-pad, size + pad);
+        if (pad >= 0.0f) {
+            glm::vec2 p{pad, pad};
+            aabbCollider->setLocalBounds(-p, size + p);
+        } else {
+            glm::vec2 inset{std::abs(pad), std::abs(pad)};
+            glm::vec2 min{inset.x, 0.0f}; // keep feet at y=0
+            glm::vec2 max{size.x - inset.x, size.y - inset.y};
+            max.x = std::max(max.x, min.x + 1.0f);
+            max.y = std::max(max.y, min.y + 1.0f);
+            aabbCollider->setLocalBounds(min, max);
+        }
         return true;
     }
 
     if (auto *circleCollider = dynamic_cast<CircleCollider *>(m_collider.get())) {
-        const float radius = 0.5f * std::max(size.x, size.y) + padding;
-        circleCollider->setRadius(radius);
+        const float radius = 0.5f * std::max(size.x, size.y) + pad;
+        circleCollider->setRadius(std::max(radius, 1.0f));
         // Place the circle at the sprite's center in local space.
         circleCollider->setLocalOffset(size * 0.5f);
         return true;

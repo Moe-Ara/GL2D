@@ -38,6 +38,7 @@ struct LevelLayer {
 struct TileLayer {
     std::string id;
     std::string tilemapId;
+    std::string tilesetId;
     bool collision{false};
     int zIndex{0};
     glm::vec2 offset{0.0f, 0.0f};

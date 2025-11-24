@@ -4,14 +4,6 @@
 #include "Physics/Collision/CollisionDispatcher.hpp"
 #include "Utils/Transform.hpp"
 
-namespace {
-void attachTransform(CircleCollider &collider, const glm::vec2 &position) {
-    auto *transform = new Transform();
-    transform->setPos(position);
-    collider.setTransform(transform);
-}
-}
-
 BOOST_AUTO_TEST_SUITE(TriggerCollisionTests)
 
 BOOST_AUTO_TEST_CASE(trigger_overlap_returns_collision_with_zero_penetration) {
@@ -19,8 +11,12 @@ BOOST_AUTO_TEST_CASE(trigger_overlap_returns_collision_with_zero_penetration) {
     CircleCollider b(1.0f);
     a.setTrigger(true);
     b.setTrigger(true);
-    attachTransform(a, {0.0f, 0.0f});
-    attachTransform(b, {0.5f, 0.0f});
+    Transform ta{};
+    Transform tb{};
+    ta.setPos({0.0f, 0.0f});
+    tb.setPos({0.5f, 0.0f});
+    a.setTransform(&ta);
+    b.setTransform(&tb);
 
     auto hit = CollisionDispatcher::dispatch(a, b);
     BOOST_REQUIRE(hit);
@@ -32,8 +28,12 @@ BOOST_AUTO_TEST_CASE(trigger_once_consumes_after_first_overlap) {
     CircleCollider trigger(1.0f);
     CircleCollider other(1.0f);
     trigger.setTrigger(true, true);
-    attachTransform(trigger, {0.0f, 0.0f});
-    attachTransform(other, {0.25f, 0.0f});
+    Transform ta{};
+    Transform tb{};
+    ta.setPos({0.0f, 0.0f});
+    tb.setPos({0.25f, 0.0f});
+    trigger.setTransform(&ta);
+    other.setTransform(&tb);
 
     auto first = CollisionDispatcher::dispatch(trigger, other);
     BOOST_REQUIRE(first);

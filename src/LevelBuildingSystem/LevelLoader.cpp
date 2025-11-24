@@ -11,6 +11,7 @@
 #include "GameObjects/Components/TilemapComponent.hpp"
 #include "GameObjects/Prefabs/PrefabCatalouge.hpp"
 #include "Managers/TilemapManager.hpp"
+#include "Managers/TilesetManager.hpp"
 #include "Utils/SimpleJson.hpp"
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -52,6 +53,9 @@ Level LevelLoader::loadFromData(const LevelData &data) {
         if (!tilemapData) {
             // Skip missing tilemaps
             continue;
+        }
+        if (tilemapData->tilesetId.empty() && !layer.tilesetId.empty()) {
+            tilemapData->tilesetId = layer.tilesetId;
         }
         auto tileEntity = std::make_unique<Entity>();
         auto &transform = tileEntity->addComponent<TransformComponent>();
@@ -152,6 +156,7 @@ Level LevelLoader::loadFromFile(const std::string &path) {
             TileLayer layer{};
             if (entry.hasKey("id")) layer.id = entry.at("id").asString();
             if (entry.hasKey("tilemapId")) layer.tilemapId = entry.at("tilemapId").asString();
+            if (entry.hasKey("tilesetId")) layer.tilesetId = entry.at("tilesetId").asString();
             if (entry.hasKey("collision")) layer.collision = entry.at("collision").asBoolean();
             if (entry.hasKey("zIndex")) layer.zIndex = static_cast<int>(entry.at("zIndex").asNumber());
             if (entry.hasKey("offset")) layer.offset = getVec2(entry.at("offset"));
