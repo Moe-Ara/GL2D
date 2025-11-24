@@ -178,7 +178,7 @@ int main() {
     Rendering::Renderer renderer("Shaders/vertex.vert", "Shaders/fragment.frag");
     Camera camera(1280.0f, 720.0f);
     camera.setFollowMode(CameraFollowMode::HardLock);
-    camera.setDamping(0.0f);
+    camera.setDamping(8.0f);
 
     InputService inputService;
     inputService.initialize(window);
