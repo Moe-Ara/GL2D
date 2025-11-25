@@ -25,14 +25,7 @@ file(GLOB_RECURSE HEADERS "${SRC_DIR}/*.hpp" "${SRC_DIR}/*.h")
 
 # Executable
 add_executable(${PROJECT_NAME} main.cpp ${SOURCES} ${HEADERS}
-        src/Physics/Collision/ACollider.cpp
-        src/Physics/Collision/ICollider.hpp
-        src/Physics/RigidBody.cpp
-        src/Physics/RigidBody.hpp
-        src/GameObjects/Components/RigidBodyComponent.cpp
-        src/GameObjects/Components/RigidBodyComponent.hpp
-        src/RenderingSystem/TilemapRenderer.cpp
-        src/RenderingSystem/TilemapRenderer.hpp)
+)
 
 file(COPY ${SHADERS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${RES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -81,6 +74,18 @@ set(GL2D_TEST_SOURCES
         src/Physics/Collision/CapsuleCollider.cpp
         src/InputSystem/InputEventBus.cpp
         src/GameObjects/Entity.cpp
+        src/ParticleSystem/ParticleEffectSystem.cpp
+        src/ParticleSystem/ParticleEffectSystem.hpp
+        src/ParticleSystem/ParticleEffectLoader.cpp
+        src/ParticleSystem/ParticleEffectLoader.hpp
+        src/ParticleSystem/Particle.hpp
+        src/ParticleSystem/ParticleEmitterConfig.hpp
+        src/ParticleSystem/ParticleEmitter.cpp
+        src/ParticleSystem/ParticleEmitter.hpp
+        src/ParticleSystem/ParticleSystem.cpp
+        src/ParticleSystem/ParticleSystem.hpp
+        src/RenderingSystem/ParticleRenderer.cpp
+        src/RenderingSystem/ParticleRenderer.hpp
 )
 
 add_executable(GL2D_TEST ${GL2D_TEST_SOURCES})
