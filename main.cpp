@@ -20,6 +20,7 @@
 #include "RenderingSystem/ParticleRenderer.hpp"
 #include "ParticleSystem/ParticleSystem.hpp"
 #include "ParticleSystem/ParticleEffectLoader.hpp"
+#include "AudioSystem/AudioManager.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -36,6 +37,20 @@
 #define NOMINMAX
 #include <windows.h>
 #endif
+
+namespace {
+Camera* gActiveCamera = nullptr;
+
+void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
+    const int safeWidth = std::max(width, 1);
+    const int safeHeight = std::max(height, 1);
+    glViewport(0, 0, safeWidth, safeHeight);
+    if (gActiveCamera) {
+        gActiveCamera->setViewportSize(static_cast<float>(safeWidth),
+                                       static_cast<float>(safeHeight));
+    }
+}
+} // namespace
 
 struct AnimationLoadResult {
     std::map<std::string, std::shared_ptr<Graphics::Animation>> animations;
@@ -186,10 +201,44 @@ int main() {
     }
 
     Rendering::Renderer renderer("Shaders/vertex.vert", "Shaders/fragment.frag");
-    Rendering::ParticleRenderer particleRenderer;
+//    Rendering::ParticleRenderer particleRenderer;
     Camera camera(1280.0f, 720.0f);
+    gActiveCamera = &camera;
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    int fbWidth = 0, fbHeight = 0;
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+    framebuffer_size_callback(window, fbWidth, fbHeight);
     camera.setFollowMode(CameraFollowMode::HardLock);
     camera.setDamping(8.0f);
+    Audio::AudioManager audio;
+    try {
+        audio.init();
+        // Register a couple of example triggers (ensure these files exist in assets/audio).
+//        Audio::PlayParams jumpParams;
+//        jumpParams.volume = 0.9f;
+//        jumpParams.pitch = 1.0f;
+//        jumpParams.spatial = true;
+//        jumpParams.minDistance = 1.0f;
+//        jumpParams.maxDistance = 35.0f;
+//        audio.registerSfxTrigger("sfx_jump", "assets/audio/jump.ogg", jumpParams, 2);
+
+//        Audio::PlayParams landParams;
+//        landParams.volume = 0.8f;
+//        landParams.spatial = true;
+//        landParams.minDistance = 1.0f;
+//        landParams.maxDistance = 35.0f;
+//        audio.registerSfxTrigger("sfx_land", "assets/audio/land.ogg", landParams, 2);
+
+        // Background music (streaming). Ensure this file exists.
+        if (audio.playMusic("assets/audio/bgm1.mp3", false, 500)) {
+            std::cout << "[Audio] Started BGM assets/audio/bgm1.mp3" << std::endl;
+            audio.queueNextMusic("assets/audio/bgm.mp3", true, 2000);
+        } else {
+            std::cerr << "[Audio] Could not start BGM assets/audio/bgm1.mp3" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Audio init failed: " << e.what() << std::endl;
+    }
 
     InputService inputService;
     inputService.initialize(window);
@@ -248,7 +297,7 @@ int main() {
 
     camera.setTarget(&playerTransform.getTransform());
     camera.setWorldBounds(glm::vec4{-1000.0f, -200.0f, 2000.0f, 800.0f});
-    particleRenderer.setBorder({0.0f, 0.0f, 0.0f, 1.0f}, 0.00f); // black, thin outline
+//    particleRenderer.setBorder({0.0f, 0.0f, 0.0f, 1.0f}, 0.00f); // black, thin outline
 
     // Particle effects setup
     ParticleSystem particleSystem;
@@ -318,7 +367,7 @@ int main() {
 #ifdef _WIN32
     SYSTEM_INFO sysInfo{};
     GetSystemInfo(&sysInfo);
-    const double cpuCount = static_cast<double>(sysInfo.dwNumberOfProcessors == 0 ? 1 : sysInfo.dwNumberOfProcessors);
+    const auto cpuCount = static_cast<double>(sysInfo.dwNumberOfProcessors == 0 ? 1 : sysInfo.dwNumberOfProcessors);
     auto fileTimeToSec = [](const FILETIME& ft) {
         ULARGE_INTEGER uli{};
         uli.LowPart = ft.dwLowDateTime;
@@ -339,6 +388,23 @@ int main() {
         // Pull and resolve input for this frame so components can read getActionEvents().
         inputService.pollEvents();
 
+        // Update listener at player position.
+        {
+            const auto& pos2d = playerTransform.getTransform().Position;
+            audio.setListener(glm::vec3{pos2d.x, pos2d.y, 0.0f}, glm::vec3{0.0f, 0.0f, -1.0f}, glm::vec3{0.0f, 1.0f, 0.0f});
+        }
+
+        // Fire audio triggers based on input events.
+//        for (const auto& evt : inputService.getActionEvents()) {
+//            const bool pressed = evt.eventType == InputEventType::ButtonPressed;
+//            if (pressed && evt.actionName == "Jump") {
+//                const auto& pos2d = playerTransform.getTransform().Position;
+//                glm::vec3 pos3d{pos2d.x, pos2d.y, 0.0f};
+//                audio.triggerSfx("sfx_jump", &pos3d);
+//            }
+//        }
+        audio.update();
+
         scene.updateWorld(deltaTime, camera, renderer);
 
         // Update particle emitter to follow player
@@ -349,9 +415,9 @@ int main() {
         particleSystem.update(deltaTime);
 
         // Draw particles after scene render
-        particleRenderer.begin(camera.getViewProjection());
-        particleSystem.render(particleRenderer);
-        particleRenderer.end();
+//        particleRenderer.begin(camera.getViewProjection());
+//        particleSystem.render(particleRenderer);
+//        particleRenderer.end();
 
 #ifdef _WIN32
         ++frameCount;
@@ -371,7 +437,6 @@ int main() {
                                 + " | avg ms: " + std::to_string(static_cast<int>(avgMs))
                                 + " | CPU: " + std::to_string(static_cast<int>(cpuPercent)) + "% | GPU: N/A";
             glfwSetWindowTitle(window, title.c_str());
-            std::cout << title << std::endl;
             frameCount = 0;
             lastStatTime = now;
         }
@@ -380,6 +445,7 @@ int main() {
         glfwSwapBuffers(window);
     }
 
+    audio.shutdown();
     glfwTerminate();
     return 0;
 }
