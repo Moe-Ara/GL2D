@@ -1,0 +1,8 @@
+cmake-build-debug/
+.vscode/
+.idea/
+vc140.pdb
+.clangd
+compile_commands.json
+build/
+build-clangd/

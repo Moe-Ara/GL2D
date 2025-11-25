@@ -1,0 +1,76 @@
+Input System Backlog (Jira-style)
+=================================
+
+Epic: INPUT-EPIC-001 – Multi-Device Command-Based Input Layer
+-------------------------------------------------------------
+Goal: Deliver an input abstraction that captures keyboard/mouse/gamepad data, maps it to actions/commands, and exposes events for gameplay systems (animation, movement, UI).
+
+Story INPUT-101 – Device Capture Service
+----------------------------------------
+**Description**  
+Build a centralized `InputService` that initializes GLFW callbacks for keyboard/mouse and polls connected gamepads each frame, normalizing all raw events.
+
+**Acceptance Criteria**  
+1. Service queues `InputEvent` objects with type (Press/Release/Axis), device info, timestamp, and value.  
+2. Provides `pollEvents()` / `flushEvents()` API so the main loop can consume them deterministically.  
+3. Logs device connect/disconnect events (for controllers) and exposes connected device list.
+
+Story INPUT-102 – Action Mapping & Profiles
+-------------------------------------------
+**Description**  
+Introduce a data-driven binding system (`assets/config/input_bindings.json`) that maps device inputs to named actions and optional command classes.
+
+**Acceptance Criteria**  
+1. JSON schema supports action definitions, device-specific bindings, and multiple profiles (keyboard/mouse vs gamepad).  
+2. Engine loads bindings at startup, validates references, and falls back to defaults on errors.  
+3. Switching profiles at runtime updates the mapping without restarting the service.
+
+Story INPUT-103 – Command Execution Pipeline
+--------------------------------------------
+**Description**  
+Implement a command interface (`IInputCommand::execute(const InputContext&)`) and integrate it so actions fire their associated commands when triggered.
+
+**Acceptance Criteria**  
+1. Commands can be registered by name, instantiated via a factory, and reused across actions.  
+2. Input events resolve to actions, actions dispatch to commands with context (device, strength, delta).  
+3. Provide sample commands: `CmdMoveHorizontal`, `CmdTriggerAnimationSignal`.
+
+Story INPUT-104 – Event Bus & Listener API
+------------------------------------------
+**Description**  
+Add an event-dispatch mechanism where gameplay systems subscribe to high-level `ActionEvent`s (Started/Ended/AxisChanged).
+
+**Acceptance Criteria**  
+1. `InputEventBus` allows listeners to register/unregister callbacks per action.  
+2. Dispatch happens on the main thread in deterministic order (same as event queue).  
+3. Documentation + example showing player controller listening for Move/Jump actions.
+
+Story INPUT-105 – Animation Condition Bridge
+--------------------------------------------
+**Description**  
+Connect input actions to the animation state machine by allowing commands/events to toggle named animation conditions.
+
+**Acceptance Criteria**  
+1. Define `IAnimationConditionSink` with methods `setCondition(name, bool)` and `triggerEvent(name)`.  
+2. Provide commands that call into the sink using condition names from the bindings file.  
+3. Demonstrate by triggering the existing blink/idle transitions via placeholder keys or gamepad buttons.
+
+Story INPUT-106 – Debug Tools & Hot Reload
+------------------------------------------
+**Description**  
+Provide diagnostics and optional hot-reload for input bindings to ease iteration.
+
+**Acceptance Criteria**  
+1. Console/overlay command `input.list` prints active devices, bindings, and listeners.  
+2. `input.reload` reloads the bindings JSON and updates mappings without restarting.  
+3. Validation errors are surfaced clearly (log + on-screen overlay in debug builds).
+
+Story INPUT-107 – Automated Tests & Docs
+----------------------------------------
+**Description**  
+Backfill unit/integration tests for the input module and document how to extend it.
+
+**Acceptance Criteria**  
+1. Tests cover binding parsing, command dispatch, and event bus subscription edge cases.  
+2. Documentation page outlines architecture, data formats, and steps for adding new actions/devices.  
+3. CI (or local script) runs the tests as part of the standard workflow.

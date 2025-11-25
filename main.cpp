@@ -17,6 +17,9 @@
 #include "Physics/PhysicsUnits.hpp"
 #include "RenderingSystem/RenderSystem.hpp"
 #include "RenderingSystem/Renderer.hpp"
+#include "RenderingSystem/ParticleRenderer.hpp"
+#include "ParticleSystem/ParticleSystem.hpp"
+#include "ParticleSystem/ParticleEffectLoader.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -24,8 +27,15 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <algorithm>
+#include <chrono>
+#include <string>
 #include <unordered_map>
 #include <vector>
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 struct AnimationLoadResult {
     std::map<std::string, std::shared_ptr<Graphics::Animation>> animations;
@@ -176,6 +186,7 @@ int main() {
     }
 
     Rendering::Renderer renderer("Shaders/vertex.vert", "Shaders/fragment.frag");
+    Rendering::ParticleRenderer particleRenderer;
     Camera camera(1280.0f, 720.0f);
     camera.setFollowMode(CameraFollowMode::HardLock);
     camera.setDamping(8.0f);
@@ -237,6 +248,47 @@ int main() {
 
     camera.setTarget(&playerTransform.getTransform());
     camera.setWorldBounds(glm::vec4{-1000.0f, -200.0f, 2000.0f, 800.0f});
+    particleRenderer.setBorder({0.0f, 0.0f, 0.0f, 1.0f}, 0.00f); // black, thin outline
+
+    // Particle effects setup
+    ParticleSystem particleSystem;
+    ParticleEmitter* electricEmitter = nullptr;
+    try {
+        auto effects = ParticleEffectLoader::loadFromFile("assets/config/particles.json");
+        auto it = std::find_if(effects.begin(), effects.end(), [](const auto& e){ return e.name == "blue_fire"; });
+        if (it == effects.end()) {
+            it = std::find_if(effects.begin(), effects.end(), [](const auto& e){ return e.name == "blue_electron"; });
+        }
+        if (it != effects.end()) {
+            electricEmitter = particleSystem.createEmitter(it->maxParticles, it->config);
+        }
+    } catch (const std::exception& ex) {
+        std::cerr << "Failed to load particle effects: " << ex.what() << std::endl;
+    }
+    if (!electricEmitter) {
+        // Fallback in case loading failed; keeps effect alive while player exists.
+        ParticleEmitterConfig fallback{};
+        fallback.spawnRate = 180.0f;
+        fallback.burstCount = 0;
+        fallback.minLifeTime = 0.6f;
+        fallback.maxLifeTime = 1.6f;
+        fallback.minSpeed = 40.0f;
+        fallback.maxSpeed = 110.0f;
+        fallback.direction = 1.57f;
+        fallback.spread = 2.6f;
+        fallback.minSize = 14.0f;
+        fallback.maxSize = 32.0f;
+        fallback.startColor = {0.35f, 0.9f, 1.8f, 0.9f};
+        fallback.endColor = {0.05f, 0.35f, 1.0f, 0.0f};
+        fallback.gravity = {0.0f, 80.0f};
+        fallback.drag = 0.35f;
+        electricEmitter = particleSystem.createEmitter(260, fallback);
+    }
+        if (electricEmitter) {
+            electricEmitter->setPosition(playerTransform.getTransform().Position);
+            electricEmitter->setTarget(playerTransform.getTransform().Position);
+            electricEmitter->burst(electricEmitter->getConfig().burstCount);
+        }
 
     // Background layered parallax to make camera motion obvious.
     Entity &background = scene.createEntity();
@@ -259,6 +311,23 @@ int main() {
     midground.addComponent<SpriteComponent>(midSprite.get(), -9);
 
     double lastTime = glfwGetTime();
+    std::size_t frameCount = 0;
+    auto lastStatTime = std::chrono::steady_clock::now();
+    double fps = 0.0;
+    double avgMs = 0.0;
+#ifdef _WIN32
+    SYSTEM_INFO sysInfo{};
+    GetSystemInfo(&sysInfo);
+    const double cpuCount = static_cast<double>(sysInfo.dwNumberOfProcessors == 0 ? 1 : sysInfo.dwNumberOfProcessors);
+    auto fileTimeToSec = [](const FILETIME& ft) {
+        ULARGE_INTEGER uli{};
+        uli.LowPart = ft.dwLowDateTime;
+        uli.HighPart = ft.dwHighDateTime;
+        return static_cast<double>(uli.QuadPart) * 1e-7;
+    };
+    FILETIME prevKernel{}, prevUser{}, prevDummy{};
+    GetProcessTimes(GetCurrentProcess(), &prevDummy, &prevDummy, &prevKernel, &prevUser);
+#endif
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         inputService.update();
@@ -271,6 +340,42 @@ int main() {
         inputService.pollEvents();
 
         scene.updateWorld(deltaTime, camera, renderer);
+
+        // Update particle emitter to follow player
+        if (electricEmitter) {
+            electricEmitter->setPosition(playerTransform.getTransform().Position);
+            electricEmitter->setTarget(playerTransform.getTransform().Position);
+        }
+        particleSystem.update(deltaTime);
+
+        // Draw particles after scene render
+        particleRenderer.begin(camera.getViewProjection());
+        particleSystem.render(particleRenderer);
+        particleRenderer.end();
+
+#ifdef _WIN32
+        ++frameCount;
+        auto now = std::chrono::steady_clock::now();
+        const double statElapsed = std::chrono::duration<double>(now - lastStatTime).count();
+        if (statElapsed >= 1.0) {
+            fps = static_cast<double>(frameCount) / statElapsed;
+            avgMs = (statElapsed * 1000.0) / static_cast<double>(frameCount > 0 ? frameCount : 1);
+            FILETIME curKernel{}, curUser{}, dummy{};
+            GetProcessTimes(GetCurrentProcess(), &dummy, &dummy, &curKernel, &curUser);
+            const double kernelDelta = fileTimeToSec(curKernel) - fileTimeToSec(prevKernel);
+            const double userDelta = fileTimeToSec(curUser) - fileTimeToSec(prevUser);
+            const double cpuPercent = ((kernelDelta + userDelta) / statElapsed) * (100.0 / cpuCount);
+            prevKernel = curKernel;
+            prevUser = curUser;
+            std::string title = "GL2D | FPS: " + std::to_string(static_cast<int>(fps))
+                                + " | avg ms: " + std::to_string(static_cast<int>(avgMs))
+                                + " | CPU: " + std::to_string(static_cast<int>(cpuPercent)) + "% | GPU: N/A";
+            glfwSetWindowTitle(window, title.c_str());
+            std::cout << title << std::endl;
+            frameCount = 0;
+            lastStatTime = now;
+        }
+#endif
 
         glfwSwapBuffers(window);
     }
