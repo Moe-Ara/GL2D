@@ -13,6 +13,7 @@
 #include <chrono>
 #include <glm/vec3.hpp>
 #include "third_party/miniaudio.h"
+#include "FeelingsSystem/FeelingSnapshot.hpp"
 namespace Audio {
 
     enum class Bus {
@@ -73,6 +74,9 @@ namespace Audio {
 
         void registerDialogueTrigger(const std::string& id, const std::string& path, float duckDb, int maxSimultaneous = 1);
         void triggerDialogue(const std::string& id);
+
+        // Apply feeling-driven audio overrides (volumes/track/FX sends).
+        void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot);
     private:
         struct SoundDeleter {
             void operator()(ma_sound* s) const {
@@ -160,6 +164,7 @@ namespace Audio {
         std::unordered_map<std::string, DialogueTriggerConfig> m_dialogueTriggers;
 
         bool m_initialized{false};
+        std::string m_activeFeelingMusic{};
     };
 
 } // Audio

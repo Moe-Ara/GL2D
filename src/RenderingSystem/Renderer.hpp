@@ -14,6 +14,7 @@
 #include "GameObjects/Vertex.hpp"
 #include "Graphics/Shader.hpp"
 #include "GameObjects/Sprite.hpp"
+#include "FeelingsSystem/FeelingSnapshot.hpp"
 
 namespace Rendering {
 
@@ -34,6 +35,7 @@ public:
   void submitSprite(const GameObjects::Sprite &sprite, const glm::mat4 &model,
                     int zOrder = 0);
   void endFrame();
+  void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot);
 
 private:
   struct Quad {
@@ -52,6 +54,7 @@ private:
   GLuint m_defaultTexture{0};
   glm::mat4 m_viewProj{1.0f};
   std::vector<Quad> m_quads;
+  glm::vec4 m_globalTint{1.0f, 1.0f, 1.0f, 1.0f};
 };
 
 } // namespace Rendering

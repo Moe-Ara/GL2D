@@ -8,6 +8,7 @@
 #include <glm/mat4x4.hpp>
 #include <memory>
 #include <vector>
+#include "FeelingsSystem/FeelingSnapshot.hpp"
 
 namespace Graphics { class Shader; }
 
@@ -37,6 +38,7 @@ namespace Rendering{
         void end();
         void flush();
         void setBorder(const glm::vec4& color, float thickness);
+        void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot);
 
     private:
         std::vector<ParticleRenderData> m_batch{};
@@ -49,6 +51,7 @@ namespace Rendering{
         glm::mat4 m_viewProj{1.0f};
         glm::vec4 m_borderColor{0.0f};
         float m_borderThickness{0.0f}; // normalized radius (0 disables)
+        glm::vec4 m_globalTint{1.0f};
     };
 }
 

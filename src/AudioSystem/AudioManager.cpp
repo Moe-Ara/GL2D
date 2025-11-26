@@ -412,6 +412,24 @@ namespace Audio {
         }
     }
 
+    void AudioManager::applyFeeling(const FeelingsSystem::FeelingSnapshot &snapshot) {
+        if (!m_initialized) return;
+
+        if (snapshot.musicVolume.has_value()) {
+            setBusVolume(Bus::Music, *snapshot.musicVolume);
+        }
+        if (snapshot.sfxVolumeMul.has_value()) {
+            setBusVolume(Bus::SFX, *snapshot.sfxVolumeMul);
+        }
+
+        if (snapshot.musicTrackId.has_value() && !snapshot.musicTrackId->empty()) {
+            if (m_activeFeelingMusic != *snapshot.musicTrackId) {
+                playMusic(*snapshot.musicTrackId, true, static_cast<int>(snapshot.blendInMs));
+                m_activeFeelingMusic = *snapshot.musicTrackId;
+            }
+        }
+    }
+
     void AudioManager::update() {
         if (!m_initialized) {
             return;

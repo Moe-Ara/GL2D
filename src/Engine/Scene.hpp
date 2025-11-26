@@ -11,6 +11,7 @@
 #include "Physics/TriggerSystem.hpp"
 #include "Graphics/Camera/Camera.hpp"
 #include "RenderingSystem/Renderer.hpp"
+#include "FeelingsSystem/FeelingsSystem.hpp"
 
 class Scene {
 public:
@@ -35,10 +36,13 @@ public:
     const std::vector<std::unique_ptr<Entity>>& getEntities() const;
     void setPaused(bool paused) { m_paused = paused; }
     [[nodiscard]] bool isPaused() const { return m_paused; }
+    FeelingsSystem::FeelingsSystem& feelings() { return m_feelingsSystem; }
+    const FeelingsSystem::FeelingsSystem& feelings() const { return m_feelingsSystem; }
 private:
     std::vector<std::unique_ptr<Entity>> m_entities;
     PhysicsEngine m_physicsEngine{};
     TriggerSystem m_triggerSystem{};
+    FeelingsSystem::FeelingsSystem m_feelingsSystem{};
     bool m_paused{false};
 };
 

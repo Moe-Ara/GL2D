@@ -23,6 +23,9 @@
 #include "AudioSystem/AudioManager.hpp"
 #include "UI/UILoader.hpp"
 #include "UI/UIElements.hpp"
+#include "FeelingsSystem/FeelingsController.hpp"
+#include "FeelingsSystem/FeelingsSystem.hpp"
+#include "FeelingsSystem/FeelingsLoader.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -37,6 +40,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <filesystem>
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -251,6 +255,17 @@ int main() {
     inputService.loadBindingsFromFile("assets/config/input_bindings.json", "keyboard_mouse");
 
     Scene scene;
+    FeelingsSystem::FeelingsController feelingsController(scene.feelings());
+    // Load feelings config (if present) and apply a default feeling.
+    try {
+        const std::string feelingsPath = "assets/config/feelings.json";
+        if (std::filesystem::exists(feelingsPath)) {
+            auto feelings = FeelingsSystem::FeelingsLoader::loadMap(feelingsPath);
+            feelingsController.setDefinitions(std::move(feelings), "default");
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Feelings load failed: " << e.what() << std::endl;
+    }
 
     const auto animResult = loadAnimationsFromMetadata("assets/character/animations.json");
     std::shared_ptr<Graphics::Animation> startAnimation;
@@ -439,6 +454,11 @@ int main() {
         auto deltaTime = static_cast<float>(currentTime - lastTime);
         lastTime = currentTime;
 
+        // Update feelings controller (blending, timers) and apply to subsystems.
+        feelingsController.setTargets(&camera, &renderer, nullptr /*particleRenderer*/, &audio);
+        feelingsController.update(deltaTime * 1000.0f);
+        const float effectiveDt = deltaTime * feelingsController.timeScale();
+
         // Pull and resolve input for this frame so components can read getActionEvents().
         inputService.pollEvents();
 
@@ -485,14 +505,14 @@ int main() {
             pauseScreen.update(deltaTime, pointer);
         }
 
-        scene.updateWorld(deltaTime, camera, renderer);
+        scene.updateWorld(effectiveDt, camera, renderer);
 
         // Update particle emitter to follow player
         if (electricEmitter) {
             electricEmitter->setPosition(playerTransform.getTransform().Position);
             electricEmitter->setTarget(playerTransform.getTransform().Position);
         }
-        particleSystem.update(deltaTime);
+        particleSystem.update(effectiveDt);
 
         // Draw particles after scene render
 //        particleRenderer.begin(camera.getViewProjection());

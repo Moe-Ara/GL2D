@@ -1,3 +1,5 @@
+
+
 //
 // Created by Mohamad on 21/11/2025.
 //
@@ -105,7 +107,8 @@ void Renderer::submitSprite(const GameObjects::Sprite &sprite,
 
   for (size_t i = 0; i < localPositions.size(); ++i) {
     glm::vec4 world = model * glm::vec4(localPositions[i], 0.0f, 1.0f);
-    quad.verts[i] = makeVertex(glm::vec2(world.x, world.y), color, uvCoords[i]);
+    glm::vec3 tintedColor = glm::vec3(color) * glm::vec3(m_globalTint);
+    quad.verts[i] = makeVertex(glm::vec2(world.x, world.y), tintedColor, uvCoords[i]);
   }
 
   m_quads.push_back(quad);
@@ -189,4 +192,11 @@ void Renderer::createDefaultTexture() {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void Renderer::applyFeeling(const FeelingsSystem::FeelingSnapshot &snapshot) {
+    if (snapshot.colorGrade.has_value()) {
+        m_globalTint = *snapshot.colorGrade;
+    } else {
+        m_globalTint = glm::vec4(1.0f);
+    }
+}
 } // namespace Rendering

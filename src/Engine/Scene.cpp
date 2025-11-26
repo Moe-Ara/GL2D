@@ -39,6 +39,8 @@ void Scene::update(float deltaTime) {
     if (m_paused) {
         return;
     }
+    // Feelings drive cross-system parameters; update blend first.
+    m_feelingsSystem.update(deltaTime * 1000.0f); // deltaTime is seconds; convert to ms.
     for(auto& e: m_entities){
         e->update(deltaTime);
     }

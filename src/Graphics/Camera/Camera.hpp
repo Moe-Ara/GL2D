@@ -10,6 +10,7 @@
 #include "Utils/Transform.hpp"
 #include "CameraEvent.hpp"
 #include "ICameraEffect.hpp"
+#include "FeelingsSystem/FeelingSnapshot.hpp"
 
 struct CameraDebugData {
     glm::vec2 position{0.0f};
@@ -59,6 +60,11 @@ public:
     void setLookAheadSmoothing(float smoothing);
     void setFollowMode(CameraFollowMode mode);
 
+    // Apply feeling-derived overrides (zoom/follow speed/offset/shake).
+    void applyFeeling(const FeelingsSystem::FeelingSnapshot& feelingsnapshot);
+    // Clear transient overrides back to baseline.
+    void resetFeelingOverrides();
+
     const glm::mat4 & getViewProjection();
 
     // Returns world-space view bounds as (minX, minY, maxX, maxY).
@@ -84,9 +90,12 @@ private:
 
     Transform m_transform{};
     float m_zoom = 1.0f;
+    float m_baseZoom = 1.0f;
     glm::vec2 m_viewportSize{};
     glm::vec2 m_deadZoneHalfSize{1.0f, 1.0f};
     float m_damping = 5.0f;
+    float m_baseDamping = 5.0f;
+    glm::vec2 m_feelingOffset{0.0f};
     const Transform *m_target = nullptr;
     glm::vec2 m_targetOffset = glm::vec2(0.0f);
     bool m_dirty = true;
