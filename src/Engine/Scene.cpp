@@ -36,6 +36,9 @@ void Scene::clear() {
 }
 
 void Scene::update(float deltaTime) {
+    if (m_paused) {
+        return;
+    }
     for(auto& e: m_entities){
         e->update(deltaTime);
     }

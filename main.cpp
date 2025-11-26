@@ -21,14 +21,18 @@
 #include "ParticleSystem/ParticleSystem.hpp"
 #include "ParticleSystem/ParticleEffectLoader.hpp"
 #include "AudioSystem/AudioManager.hpp"
+#include "UI/UILoader.hpp"
+#include "UI/UIElements.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <algorithm>
+#include <functional>
 #include <chrono>
 #include <string>
 #include <unordered_map>
@@ -40,6 +44,8 @@
 
 namespace {
 Camera* gActiveCamera = nullptr;
+bool gMouseWasDown = false;
+bool gEscWasDown = false;
 
 void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
     const int safeWidth = std::max(width, 1);
@@ -359,6 +365,54 @@ int main() {
                                                            glm::vec2{3200.0f, 1200.0f});
     midground.addComponent<SpriteComponent>(midSprite.get(), -9);
 
+    // UI: pause menu screen loaded from JSON; textures resolved lazily.
+    std::unordered_map<std::string, std::shared_ptr<GameObjects::Texture>> uiTextures;
+    auto uiResolver = [&uiTextures](const std::string& texPath) -> GameObjects::Texture* {
+        auto it = uiTextures.find(texPath);
+        if (it != uiTextures.end()) {
+            return it->second.get();
+        }
+        auto tex = Managers::TextureManager::loadTexture(texPath);
+        uiTextures[texPath] = tex;
+        return tex ? tex.get() : nullptr;
+    };
+    UI::UIScreen pauseScreen{};
+    try {
+        pauseScreen = UI::UILoader::loadFromFile("assets/config/ui_pause.json", uiResolver);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to load pause UI: " << e.what() << std::endl;
+    }
+    auto findElement = [](const std::vector<std::shared_ptr<UI::UIElement>>& roots,
+                          const std::string& targetId) -> std::shared_ptr<UI::UIElement> {
+        std::function<std::shared_ptr<UI::UIElement>(const std::shared_ptr<UI::UIElement>&)> dfs;
+        dfs = [&](const std::shared_ptr<UI::UIElement>& node) -> std::shared_ptr<UI::UIElement> {
+            if (!node) return nullptr;
+            if (node->id() == targetId) return node;
+            for (const auto& child : node->children()) {
+                if (auto found = dfs(child)) return found;
+            }
+            return nullptr;
+        };
+        for (const auto& root : roots) {
+            if (auto found = dfs(root)) return found;
+        }
+        return nullptr;
+    };
+    bool pauseOverlayActive = false;
+    if (auto resumeEl = findElement(pauseScreen.roots, "btn_resume")) {
+        if (auto resumeBtn = std::dynamic_pointer_cast<UI::Button<>>(resumeEl)) {
+            resumeBtn->setCallback([&]() {
+                pauseOverlayActive = false;
+                scene.setPaused(false);
+            });
+        }
+    }
+    if (auto quitEl = findElement(pauseScreen.roots, "btn_quit")) {
+        if (auto quitBtn = std::dynamic_pointer_cast<UI::Button<>>(quitEl)) {
+            quitBtn->setCallback([&]() { glfwSetWindowShouldClose(window, GLFW_TRUE); });
+        }
+    }
+
     double lastTime = glfwGetTime();
     std::size_t frameCount = 0;
     auto lastStatTime = std::chrono::steady_clock::now();
@@ -405,6 +459,32 @@ int main() {
 //        }
         audio.update();
 
+        // Toggle pause overlay on ESC press.
+        const bool escDown = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+        if (escDown && !gEscWasDown) {
+            pauseOverlayActive = !pauseOverlayActive;
+            scene.setPaused(pauseOverlayActive);
+        }
+        gEscWasDown = escDown;
+
+        // Mouse pointer state for UI.
+        double cursorX = 0.0, cursorY = 0.0;
+        glfwGetCursorPos(window, &cursorX, &cursorY);
+        int fbW = 0, fbH = 0;
+        glfwGetFramebufferSize(window, &fbW, &fbH);
+        UI::UIPointerState pointer{};
+        pointer.position = {static_cast<float>(cursorX), static_cast<float>(fbH - cursorY)};
+        const bool mouseDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+        pointer.down = mouseDown;
+        pointer.pressed = mouseDown && !gMouseWasDown;
+        pointer.released = !mouseDown && gMouseWasDown;
+        gMouseWasDown = mouseDown;
+
+        if (pauseOverlayActive) {
+            pauseScreen.canvasSize = {static_cast<float>(fbW), static_cast<float>(fbH)};
+            pauseScreen.update(deltaTime, pointer);
+        }
+
         scene.updateWorld(deltaTime, camera, renderer);
 
         // Update particle emitter to follow player
@@ -418,6 +498,30 @@ int main() {
 //        particleRenderer.begin(camera.getViewProjection());
 //        particleSystem.render(particleRenderer);
 //        particleRenderer.end();
+
+        // Render pause UI overlay without clearing the scene.
+        if (pauseOverlayActive) {
+            const glm::mat4 uiProj = glm::ortho(0.0f, static_cast<float>(fbW),
+                                                0.0f, static_cast<float>(fbH));
+            renderer.beginFrame(uiProj, {}, false);
+            const auto commands = pauseScreen.collectRenderCommands();
+            for (const auto& cmd : commands) {
+                const float w = cmd.rect.z - cmd.rect.x;
+                const float h = cmd.rect.w - cmd.rect.y;
+                if (w <= 0.0f || h <= 0.0f) continue;
+                GameObjects::Sprite sprite(glm::vec2{0.0f, 0.0f}, glm::vec2{w, h},
+                                           glm::vec3{cmd.color.x, cmd.color.y, cmd.color.z});
+                if (cmd.texture) {
+                    // Non-owning alias to avoid deleting underlying manager-owned texture.
+                    std::shared_ptr<GameObjects::Texture> texAlias(cmd.texture, [](GameObjects::Texture*){});
+                    sprite.setTexture(texAlias);
+                }
+                const glm::mat4 model = glm::translate(glm::mat4(1.0f),
+                                                       glm::vec3{cmd.rect.x, cmd.rect.y, 0.0f});
+                renderer.submitSprite(sprite, model, static_cast<int>(cmd.zIndex));
+            }
+            renderer.endFrame();
+        }
 
 #ifdef _WIN32
         ++frameCount;

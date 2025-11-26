@@ -29,7 +29,8 @@ public:
   Renderer &operator=(Renderer &&other) = delete;
 
   void beginFrame(const glm::mat4 &viewProj,
-                  const glm::vec4 &clearColor = {0.f, 0.f, 0.f, 1.f});
+                  const glm::vec4 &clearColor = {0.f, 0.f, 0.f, 1.f},
+                  bool clearBuffer = true);
   void submitSprite(const GameObjects::Sprite &sprite, const glm::mat4 &model,
                     int zOrder = 0);
   void endFrame();
