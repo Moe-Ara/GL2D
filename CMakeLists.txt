@@ -19,6 +19,11 @@ set(RES_DIR ${CMAKE_SOURCE_DIR}/assets)
 set(SHADERS_DIR ${CMAKE_SOURCE_DIR}/Shaders)
 set(MODELS_DIR ${CMAKE_SOURCE_DIR}/models)
 
+# Optional normal map generation from sprites (requires Pillow).
+option(GL2D_GENERATE_NORMALS "Generate normal maps from sprites before build" OFF)
+set(GL2D_NORMAL_STRENGTH 2.0 CACHE STRING "Normal generation strength")
+set(GL2D_NORMAL_BLUR 0.0 CACHE STRING "Normal generation blur radius")
+
 # Gather all source and header files dynamically
 file(GLOB_RECURSE SOURCES "${SRC_DIR}/*.cpp")
 file(GLOB_RECURSE HEADERS "${SRC_DIR}/*.hpp" "${SRC_DIR}/*.h")
@@ -32,6 +37,33 @@ file(COPY ${RES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 # Copy models to build directory
 file(GLOB MODEL_FILES ${MODELS_DIR}/*.*)
 file(COPY ${MODEL_FILES} DESTINATION ${CMAKE_BINARY_DIR}/models)
+
+if(GL2D_GENERATE_NORMALS)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    file(GLOB_RECURSE SPRITE_IMAGES "${RES_DIR}/*.png")
+    set(NORMAL_OUTPUTS "")
+    foreach(img ${SPRITE_IMAGES})
+        file(RELATIVE_PATH rel "${RES_DIR}" "${img}")
+        string(REGEX REPLACE "\\.png$" "_normal.png" normal_rel "${rel}")
+        set(out "${CMAKE_CURRENT_BINARY_DIR}/assets/${normal_rel}")
+        get_filename_component(out_dir "${out}" DIRECTORY)
+        add_custom_command(
+            OUTPUT "${out}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${out_dir}"
+            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tools/normal_from_sprite.py"
+                    "${img}" "${out}"
+                    --strength ${GL2D_NORMAL_STRENGTH}
+                    --blur ${GL2D_NORMAL_BLUR}
+            DEPENDS "${img}" "${CMAKE_SOURCE_DIR}/tools/normal_from_sprite.py"
+            COMMENT "Generating normal map: ${normal_rel}"
+            VERBATIM
+        )
+        list(APPEND NORMAL_OUTPUTS "${out}")
+    endforeach()
+    add_custom_target(generate_sprite_normals ALL DEPENDS ${NORMAL_OUTPUTS})
+    add_dependencies(${PROJECT_NAME} generate_sprite_normals)
+endif()
+
 add_library(stb_image STATIC src/third_party/stb/stb_image.cpp)
 target_include_directories(stb_image PUBLIC third_party/stb)
 # Include directories
@@ -63,9 +95,12 @@ set(GL2D_TEST_SOURCES
         Testing/RigidBodyTests.cpp
         Testing/InputEventBusTests.cpp
         Testing/TriggerCollisionTests.cpp
+        Testing/QuadtreeTests.cpp
         src/Utils/SimpleJson.cpp
         src/Graphics/Animation/Loaders/AnimationMetadataLoader.cpp
+        src/Graphics/Shader.cpp
         src/Physics/RigidBody.cpp
+        src/Physics/Quadtree.cpp
         src/Physics/Collision/ACollider.cpp
         src/Physics/Collision/CollisionDispatcher.cpp
         src/Physics/Collision/AABB.cpp
@@ -86,6 +121,8 @@ set(GL2D_TEST_SOURCES
         src/ParticleSystem/ParticleSystem.hpp
         src/RenderingSystem/ParticleRenderer.cpp
         src/RenderingSystem/ParticleRenderer.hpp
+        src/UI/UIElements.cpp
+        src/UI/UILoader.cpp
 )
 
 add_executable(GL2D_TEST ${GL2D_TEST_SOURCES})

@@ -12,6 +12,7 @@
 #include "Physics/Collision/CircleCollider.hpp"
 #include "Physics/Collision/ACollider.hpp"
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 
@@ -42,6 +43,10 @@ public:
             m_collider->setTrigger(isTrigger, fireOnce);
         }
     }
+    void setLayer(uint32_t layer);
+    uint32_t getLayer() const { return m_layer; }
+    void setCollisionMask(uint32_t mask);
+    uint32_t getCollisionMask() const { return m_collisionMask; }
     bool isTrigger() const { return m_isTrigger; }
     bool triggersOnce() const { return m_triggerOnce; }
     void setOnTriggerEnter(std::function<void(Entity&, Entity&)> callback) { m_onTriggerEnter = std::move(callback); }
@@ -64,6 +69,8 @@ private:
     float m_padding{0.0f};
     bool m_isTrigger{false};
     bool m_triggerOnce{false};
+    uint32_t m_layer{0};
+    uint32_t m_collisionMask{0xFFFFFFFFu};
     bool m_transformBound{false};
     std::function<void(Entity&, Entity&)> m_onTriggerEnter{};
     std::function<void(Entity&, Entity&)> m_onTriggerExit{};
