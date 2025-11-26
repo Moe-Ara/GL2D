@@ -64,6 +64,14 @@ std::unique_ptr<Hit> CollisionDispatcher::dispatch(const ICollider &a, const ICo
     const ColliderType typeA = a.getType();
     const ColliderType typeB = b.getType();
 
+    const auto *caBase = dynamic_cast<const ACollider *>(&a);
+    const auto *cbBase = dynamic_cast<const ACollider *>(&b);
+    if (caBase && cbBase) {
+        if (!caBase->allowsCollisionWith(*cbBase) || !cbBase->allowsCollisionWith(*caBase)) {
+            return nullptr;
+        }
+    }
+
     // Symmetric handling: ensure (A,B) ordering is covered.
     if (typeA == ColliderType::AABB && typeB == ColliderType::AABB) {
         const auto *aa = dynamic_cast<const AABBCollider *>(&a);

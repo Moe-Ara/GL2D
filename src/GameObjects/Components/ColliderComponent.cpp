@@ -5,6 +5,7 @@
 #include "ColliderComponent.hpp"
 
 #include <GL/glew.h>
+#include <algorithm>
 
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Components/ColliderComponent.hpp"
@@ -24,6 +25,8 @@ void ColliderComponent::setCollider(std::unique_ptr<ACollider> collider) {
     m_collider = std::move(collider);
     if (m_collider) {
         m_collider->setTrigger(m_isTrigger, m_triggerOnce);
+        m_collider->setLayer(m_layer);
+        m_collider->setCollisionMask(m_collisionMask);
     }
     m_transformBound = false;
 }
@@ -34,6 +37,8 @@ void ColliderComponent::ensureCollider(Entity &owner) {
         m_transformBound = false;
         if (m_collider) {
             m_collider->setTrigger(m_isTrigger, m_triggerOnce);
+            m_collider->setLayer(m_layer);
+            m_collider->setCollisionMask(m_collisionMask);
             fitToSprite(owner, m_padding);
         }
     }
@@ -106,6 +111,20 @@ void ColliderComponent::invokeTriggerEnter(Entity &owner, Entity &other) {
 void ColliderComponent::invokeTriggerExit(Entity &owner, Entity &other) {
     if (m_onTriggerExit) {
         m_onTriggerExit(owner, other);
+    }
+}
+
+void ColliderComponent::setLayer(uint32_t layer) {
+    m_layer = std::min<uint32_t>(layer, 31u);
+    if (m_collider) {
+        m_collider->setLayer(m_layer);
+    }
+}
+
+void ColliderComponent::setCollisionMask(uint32_t mask) {
+    m_collisionMask = mask;
+    if (m_collider) {
+        m_collider->setCollisionMask(mask);
     }
 }
 
