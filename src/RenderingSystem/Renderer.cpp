@@ -74,11 +74,14 @@ void Renderer::destroyBuffers() {
 }
 
 void Renderer::beginFrame(const glm::mat4 &viewProj,
-                          const glm::vec4 &clearColor) {
+                          const glm::vec4 &clearColor,
+                          bool clearBuffer) {
   m_viewProj = viewProj;
   m_quads.clear();
-  glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
-  glClear(GL_COLOR_BUFFER_BIT);
+  if (clearBuffer) {
+      glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+      glClear(GL_COLOR_BUFFER_BIT);
+  }
 }
 
 void Renderer::submitSprite(const GameObjects::Sprite &sprite,

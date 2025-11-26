@@ -33,10 +33,13 @@ public:
     void updateWorld(float deltaTime, Camera& camera, Rendering::Renderer& renderer);
     std::vector<std::unique_ptr<Entity>>& getEntities();
     const std::vector<std::unique_ptr<Entity>>& getEntities() const;
+    void setPaused(bool paused) { m_paused = paused; }
+    [[nodiscard]] bool isPaused() const { return m_paused; }
 private:
     std::vector<std::unique_ptr<Entity>> m_entities;
     PhysicsEngine m_physicsEngine{};
     TriggerSystem m_triggerSystem{};
+    bool m_paused{false};
 };
 
 

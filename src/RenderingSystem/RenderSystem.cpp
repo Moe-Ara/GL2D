@@ -25,7 +25,7 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
     const glm::vec4 viewBounds =
         camera.getViewBounds(/*paddingFactor=*/1.0f); // expand by half the view size
 
-    renderer.beginFrame(viewProj, {0.05f, 0.05f, 0.08f, 1.0f});
+    renderer.beginFrame(viewProj, {0.05f, 0.05f, 0.08f, 1.0f}, true);
 
     Rendering::TilemapRenderer::render(scene, camera, viewProj);
 
