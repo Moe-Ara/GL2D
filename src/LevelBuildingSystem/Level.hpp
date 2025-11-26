@@ -16,6 +16,7 @@ struct Level {
     std::vector<std::unique_ptr<Entity>> entities;
     CameraSettings camera{};
     std::vector<LevelData::Region> regions{};
+    std::vector<LevelLight> lights{};
 };
 
 #endif //GL2D_LEVEL_HPP

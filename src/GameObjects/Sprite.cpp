@@ -43,6 +43,12 @@ void Sprite::setTexture(const std::shared_ptr<Texture> &newTexture) {
   m_texture = newTexture;
 }
 
+void Sprite::setNormalTexture(const std::shared_ptr<Texture> &newTexture) {
+  if (m_normalTexture == newTexture)
+    return;
+  m_normalTexture = newTexture;
+}
+
 const glm::vec3 &Sprite::getColor() const { return m_color; }
 
 const glm::vec4 &Sprite::getUVCoords() const { return m_uvCoords; }

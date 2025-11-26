@@ -43,6 +43,12 @@ namespace FeelingsSystem{
         std::optional<glm::vec4> ambientLight{};
         std::optional<glm::vec4> fogColor{};
         std::optional<float> fogDensity{};
+        // Lighting (rendering)
+        std::optional<float> lightIntensityMul{};
+        std::optional<float> lightRadiusMul{};
+        std::optional<glm::vec3> lightColorMul{};
+        std::optional<glm::vec3> ambientLightMul{};
+        std::optional<glm::vec3> ambientLightAdd{};
 
         //Audio
         std::optional<std::string > musicTrackId{};

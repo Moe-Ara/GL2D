@@ -20,6 +20,7 @@
 #include "RenderingSystem/ParticleRenderer.hpp"
 #include "ParticleSystem/ParticleSystem.hpp"
 #include "ParticleSystem/ParticleEffectLoader.hpp"
+#include "GameObjects/Components/LightingComponent.hpp"
 #include "AudioSystem/AudioManager.hpp"
 #include "UI/UILoader.hpp"
 #include "UI/UIElements.hpp"
@@ -286,6 +287,10 @@ int main() {
     auto groundSprite = std::make_shared<GameObjects::Sprite>(groundTransform.getTransform().Position,
                                                               glm::vec2{2000.0f, 80.0f},
                                                               glm::vec3{0.30f, 0.55f, 0.32f});
+    const std::string groundNormalPath = "assets/ground_normal.png";
+    if (std::filesystem::exists(groundNormalPath)) {
+        groundSprite->setNormalTexture(Managers::TextureManager::loadTexture(groundNormalPath));
+    }
     ground.addComponent<SpriteComponent>(groundSprite.get(), -1);
     ground.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
     auto groundBody = std::make_unique<RigidBody>(0.0f, RigidBodyType::STATIC);
@@ -368,6 +373,10 @@ int main() {
     auto bgSprite = std::make_shared<GameObjects::Sprite>(bgTex,
                                                           bgTransform.getTransform().Position,
                                                           glm::vec2{3200.0f, 1800.0f});
+    const std::string bgNormalPath = "assets/BG/bg_sky_normal.png";
+    if (std::filesystem::exists(bgNormalPath)) {
+        bgSprite->setNormalTexture(Managers::TextureManager::loadTexture(bgNormalPath));
+    }
     background.addComponent<SpriteComponent>(bgSprite.get(), -10);
 
     // Midground band for parallax contrast (solid color).
@@ -378,7 +387,13 @@ int main() {
     auto midSprite = std::make_shared<GameObjects::Sprite>(midTex,
                                                            midTransform.getTransform().Position,
                                                            glm::vec2{3200.0f, 1200.0f});
+    const std::string midNormalPath = "assets/BG/bg_forest_normal.png";
+    if (std::filesystem::exists(midNormalPath)) {
+        midSprite->setNormalTexture(Managers::TextureManager::loadTexture(midNormalPath));
+    }
     midground.addComponent<SpriteComponent>(midSprite.get(), -9);
+
+    // Sample lights removed; rely on level-defined lights or fallback fills.
 
     // UI: pause menu screen loaded from JSON; textures resolved lazily.
     std::unordered_map<std::string, std::shared_ptr<GameObjects::Texture>> uiTextures;
@@ -455,8 +470,8 @@ int main() {
         lastTime = currentTime;
 
         // Update feelings controller (blending, timers) and apply to subsystems.
-        feelingsController.setTargets(&camera, &renderer, nullptr /*particleRenderer*/, &audio);
-        feelingsController.update(deltaTime * 1000.0f);
+//        feelingsController.setTargets(&camera, &renderer, nullptr /*particleRenderer*/, &audio);
+//        feelingsController.update(deltaTime * 1000.0f);
         const float effectiveDt = deltaTime * feelingsController.timeScale();
 
         // Pull and resolve input for this frame so components can read getActionEvents().

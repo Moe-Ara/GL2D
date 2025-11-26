@@ -40,10 +40,12 @@ public:
 private:
   struct Quad {
     GLuint textureId{0};
+    GLuint normalTextureId{0};
     int zIndex{0};
     Vertex verts[4];
   };
   void createDefaultTexture();
+  void createDefaultNormalTexture();
 
   void createBuffers();
   void destroyBuffers();
@@ -52,6 +54,7 @@ private:
   std::shared_ptr<Graphics::Shader> m_shader;
   GLuint m_vao{}, m_vbo{}, m_ibo{};
   GLuint m_defaultTexture{0};
+  GLuint m_defaultNormal{0};
   glm::mat4 m_viewProj{1.0f};
   std::vector<Quad> m_quads;
   glm::vec4 m_globalTint{1.0f, 1.0f, 1.0f, 1.0f};

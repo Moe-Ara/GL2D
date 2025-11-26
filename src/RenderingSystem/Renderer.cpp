@@ -28,6 +28,7 @@ Renderer::Renderer(const std::string &vsPath, const std::string &fsPath)
     : m_shader(std::make_shared<Graphics::Shader>(vsPath, fsPath)) {
   createBuffers();
   createDefaultTexture();
+  createDefaultNormalTexture();
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
@@ -61,6 +62,10 @@ void Renderer::destroyBuffers() {
     glDeleteTextures(1, &m_defaultTexture);
     m_defaultTexture = 0;
   }
+  if (m_defaultNormal) {
+    glDeleteTextures(1, &m_defaultNormal);
+    m_defaultNormal = 0;
+  }
   if (m_vbo) {
     glDeleteBuffers(1, &m_vbo);
     m_vbo = 0;
@@ -92,6 +97,9 @@ void Renderer::submitSprite(const GameObjects::Sprite &sprite,
   quad.textureId = sprite.hasTexture() && sprite.getTexture()
                        ? sprite.getTexture()->getID()
                        : m_defaultTexture;
+  quad.normalTextureId = sprite.hasNormalTexture() && sprite.getNormalTexture()
+                         ? sprite.getNormalTexture()->getID()
+                         : m_defaultNormal;
   quad.zIndex = zOrder;
 
   const auto &color = sprite.getColor();
@@ -122,6 +130,9 @@ void Renderer::flush() {
   std::stable_sort(m_quads.begin(), m_quads.end(),
                    [](const Quad &a, const Quad &b) {
                      if (a.zIndex == b.zIndex) {
+                       if (a.textureId == b.textureId) {
+                         return a.normalTextureId < b.normalTextureId;
+                       }
                        return a.textureId < b.textureId;
                      }
                      return a.zIndex < b.zIndex;
@@ -131,6 +142,7 @@ void Renderer::flush() {
   m_shader->setUniformMat4("projection", m_viewProj);
   m_shader->setUniformMat4("transform", glm::mat4(1.0f));
   m_shader->setUniformInt1("spriteTexture", 0);
+  m_shader->setUniformInt1("normalTexture", 1);
 
   glBindVertexArray(m_vao);
 
@@ -139,11 +151,13 @@ void Renderer::flush() {
   size_t quadIndex = 0;
   while (quadIndex < m_quads.size()) {
     const GLuint currentTexture = m_quads[quadIndex].textureId;
+    const GLuint currentNormal = m_quads[quadIndex].normalTextureId;
     vertices.clear();
     indices.clear();
 
     for (; quadIndex < m_quads.size() &&
-           m_quads[quadIndex].textureId == currentTexture;
+           m_quads[quadIndex].textureId == currentTexture &&
+           m_quads[quadIndex].normalTextureId == currentNormal;
          ++quadIndex) {
       const auto &quad = m_quads[quadIndex];
       const auto base = static_cast<uint32_t>(vertices.size());
@@ -168,6 +182,8 @@ void Renderer::flush() {
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, currentTexture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, currentNormal);
 
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()),
                    GL_UNSIGNED_INT, nullptr);
@@ -192,11 +208,21 @@ void Renderer::createDefaultTexture() {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void Renderer::createDefaultNormalTexture() {
+  glGenTextures(1, &m_defaultNormal);
+  glBindTexture(GL_TEXTURE_2D, m_defaultNormal);
+  const unsigned char flat[4] = {128, 128, 255, 255}; // (0,0,1)
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, flat);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 void Renderer::applyFeeling(const FeelingsSystem::FeelingSnapshot &snapshot) {
-    if (snapshot.colorGrade.has_value()) {
-        m_globalTint = *snapshot.colorGrade;
-    } else {
-        m_globalTint = glm::vec4(1.0f);
-    }
+    // Feelings no longer tint the albedo; keep tint neutral.
+    (void)snapshot;
+    m_globalTint = glm::vec4(1.0f);
 }
 } // namespace Rendering
