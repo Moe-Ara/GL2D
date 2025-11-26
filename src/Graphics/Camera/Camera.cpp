@@ -46,6 +46,8 @@ Camera::Camera(float viewportWidth, float viewportHeight) : m_viewportSize(viewp
     m_transform.Rotation = 0.0f;
 
     m_deadZoneHalfSize = 0.25f * glm::vec2(viewportWidth, viewportHeight);
+    m_baseZoom = m_zoom;
+    m_baseDamping = m_damping;
 }
 
 void Camera::setZoom(float zoom) {
@@ -126,7 +128,7 @@ void Camera::followTargetPosition(const glm::vec2 &targetPos, float deltaTime) {
 
     glm::vec2 smoothedPos = glm::mix(camPos, desiredPos, smoothingAlpha);
     smoothedPos = clampToWorldBounds(smoothedPos);
-    m_transform.setPos(smoothedPos);
+    m_transform.setPos(smoothedPos + m_feelingOffset);
     m_dirty = true;
 }
 
@@ -175,6 +177,26 @@ void Camera::setLookAheadLimits(const glm::vec2 &maxOffsets) {
 
 void Camera::setLookAheadSmoothing(float smoothing) {
     m_lookAheadSmoothing = std::max(0.0f, smoothing);
+}
+
+void Camera::applyFeeling(const FeelingsSystem::FeelingSnapshot& feelingsnapshot) {
+    resetFeelingOverrides();
+    if (feelingsnapshot.zoomMul.has_value()) {
+        setZoom(m_baseZoom * *feelingsnapshot.zoomMul);
+    }
+    if (feelingsnapshot.followSpeedMul.has_value()) {
+        setDamping(m_baseDamping * *feelingsnapshot.followSpeedMul);
+    }
+    if (feelingsnapshot.offset.has_value()) {
+        m_feelingOffset = *feelingsnapshot.offset;
+    }
+    m_dirty = true;
+}
+
+void Camera::resetFeelingOverrides() {
+    m_feelingOffset = glm::vec2(0.0f);
+    setZoom(m_baseZoom);
+    setDamping(m_baseDamping);
 }
 
 void Camera::onEvent(const CameraEvent &event) {
@@ -264,6 +286,8 @@ CameraDebugData Camera::getDebugData() const {
     data.worldBoundsEnabled = m_worldBoundsEnabled;
     return data;
 }
+
+
 
 glm::vec2 Camera::clampToWorldBounds(const glm::vec2 &position) const {
     if (!m_worldBoundsEnabled) {

@@ -107,7 +107,9 @@ void Rendering::ParticleRenderer::begin(const glm::mat4 &viewProjection) {
 }
 
 void Rendering::ParticleRenderer::submit(const Rendering::ParticleRenderData &p) {
-    m_batch.push_back(p);
+    Rendering::ParticleRenderData tinted = p;
+    tinted.color *= m_globalTint;
+    m_batch.push_back(tinted);
 }
 
 void Rendering::ParticleRenderer::end() {
@@ -117,6 +119,16 @@ void Rendering::ParticleRenderer::end() {
 void Rendering::ParticleRenderer::setBorder(const glm::vec4 &color, float thickness) {
     m_borderColor = color;
     m_borderThickness = std::max(0.0f, thickness);
+}
+
+void Rendering::ParticleRenderer::applyFeeling(const FeelingsSystem::FeelingSnapshot &snapshot) {
+    if (snapshot.ambientLight.has_value()) {
+        m_globalTint = *snapshot.ambientLight;
+    } else if (snapshot.colorGrade.has_value()) {
+        m_globalTint = *snapshot.colorGrade;
+    } else {
+        m_globalTint = glm::vec4(1.0f);
+    }
 }
 
 void Rendering::ParticleRenderer::flush() {

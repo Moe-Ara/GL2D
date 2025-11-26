@@ -1,5 +1,6 @@
 #include "PlayerController.hpp"
 
+
 #include <algorithm>
 #include <cmath>
 
@@ -94,4 +95,26 @@ void PlayerController::update(Entity &entity, double deltaTime) {
     if (sprite) {
         sprite->setPosition(position);
     }
+
 }
+void PlayerController::applyFeeling(const FeelingsSystem::FeelingSnapshot &snapshot) {
+    // Reset to baseline first.
+    resetFeelingOverrides();
+    const float speedMul = snapshot.entitySpeedMul.value_or(1.0f);
+    const float animMul = snapshot.animationSpeedMul.value_or(1.0f);
+
+    m_moveSpeed = m_baseMoveSpeed * speedMul;
+    m_acceleration = m_baseAcceleration * speedMul;
+    m_deceleration = m_baseDeceleration * speedMul;
+    m_jumpImpulse = m_baseJumpImpulse * speedMul;
+    m_gravity = m_baseGravity * animMul;
+}
+
+void PlayerController::resetFeelingOverrides() {
+    m_moveSpeed = m_baseMoveSpeed;
+    m_acceleration = m_baseAcceleration;
+    m_deceleration = m_baseDeceleration;
+    m_jumpImpulse = m_baseJumpImpulse;
+    m_gravity = m_baseGravity;
+}
+

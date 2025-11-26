@@ -1,0 +1,44 @@
+{
+  "feelings": [
+    {
+      "id": "default",
+      "blendInMs": 0,
+      "blendOutMs": 0,
+      "colorGrade": [1.0, 1.0, 1.0, 1.0],
+      "vignette": 0.0,
+      "bloomStrength": 0.0,
+      "paletteId": "",
+
+      "zoomMul": 1.0,
+      "offset": [0.0, 0.0],
+      "shakeMagnitude": 0.0,
+      "shakeRoughness": 0.0,
+      "parallaxBias": [0.0, 0.0, 0.0, 0.0],
+      "followSpeedMul": 1.0,
+
+      "timeScale": 1.0,
+      "entitySpeedMul": 1.0,
+      "animationSpeedMul": 1.0,
+
+      "particlePresetId": "",
+      "ambientLight": [1.0, 1.0, 1.0, 1.0],
+      "fogColor": [0.0, 0.0, 0.0, 0.0],
+      "fogDensity": 0.0,
+
+      "musicTrackId": "",
+      "musicVolume": 1.0,
+      "sfxTag": "",
+      "sfxVolumeMul": 1.0,
+      "audioFxPreset": "",
+      "reverbSend": 0.0,
+      "delaySend": 0.0,
+      "delayTimeMs": 0.0,
+      "delayFeedback": 0.0,
+      "lowpassHz": 0.0,
+      "highpassHz": 0.0,
+
+      "uiTint": [1.0, 1.0, 1.0, 1.0],
+      "uiLerpSpeed": 1.0
+    }
+  ]
+}
