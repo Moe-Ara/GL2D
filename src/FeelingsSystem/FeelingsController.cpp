@@ -8,6 +8,8 @@
 #include "RenderingSystem/Renderer.hpp"
 #include "RenderingSystem/ParticleRenderer.hpp"
 #include "AudioSystem/AudioManager.hpp"
+#include "RenderingSystem/RenderSystem.hpp"
+#include "FeelingsSystem/FeelingSnapshot.hpp"
 
 namespace FeelingsSystem {
 
@@ -74,7 +76,8 @@ void FeelingsController::applyToTargets(const FeelingSnapshot& snap) {
         m_camera->applyFeeling(snap);
     }
     if (m_renderer) {
-        m_renderer->applyFeeling(snap);
+        // Disable color grading tint; lighting is driven separately.
+        m_renderer->applyFeeling(FeelingSnapshot{});
     }
     if (m_particles) {
         m_particles->applyFeeling(snap);
@@ -82,6 +85,7 @@ void FeelingsController::applyToTargets(const FeelingSnapshot& snap) {
     if (m_audio) {
         m_audio->applyFeeling(snap);
     }
+    RenderSystem::applyFeeling(snap);
 }
 
 } // namespace FeelingsSystem

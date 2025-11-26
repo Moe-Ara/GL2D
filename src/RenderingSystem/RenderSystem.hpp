@@ -10,6 +10,7 @@
 #include "Engine/Scene.hpp"
 #include "Graphics/Camera/Camera.hpp"
 #include "RenderingSystem/Renderer.hpp"
+namespace FeelingsSystem { struct FeelingSnapshot; }
 
 class RenderSystem {
 public:
@@ -18,6 +19,8 @@ public:
 
     // Renders all sprites within the camera view, with padding of half the view size.
     static void renderScene(Scene& scene, Camera& camera, Rendering::Renderer& renderer);
+    // Apply feeling-driven lighting overrides (intensity/radius/color/ambient).
+    static void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot);
 };
 
 #endif //GL2D_RENDERSYSTEM_HPP

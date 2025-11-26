@@ -11,6 +11,7 @@
 #include "FeelingsManager.hpp"
 
 class Camera;
+class RenderSystem;
 namespace Rendering { class Renderer; class ParticleRenderer; }
 namespace Audio { class AudioManager; }
 

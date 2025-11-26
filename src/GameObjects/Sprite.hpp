@@ -34,6 +34,7 @@ public:
   void setSize(const glm::vec2 &newSize);
   void setUVCoords(const glm::vec4 &newUV);
   void setTexture(const std::shared_ptr<Texture> &newTexture);
+  void setNormalTexture(const std::shared_ptr<Texture> &newTexture);
 
   // Getters
   const glm::vec3 &getColor() const;
@@ -41,11 +42,14 @@ public:
   const glm::vec2 &getSize() const;
   const glm::vec2 &getPosition() const;
   const std::shared_ptr<Texture>& getTexture() const { return m_texture; }
+  const std::shared_ptr<Texture>& getNormalTexture() const { return m_normalTexture; }
 
   bool hasTexture() const;
+  bool hasNormalTexture() const { return m_normalTexture != nullptr; }
 
 private:
   std::shared_ptr<Texture> m_texture;
+  std::shared_ptr<Texture> m_normalTexture;
   glm::vec2 m_position{};
   glm::vec2 m_size{};
   glm::vec4 m_uvCoords{};

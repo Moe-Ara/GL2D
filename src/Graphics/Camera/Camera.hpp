@@ -73,6 +73,7 @@ public:
 
     glm::vec2 screenToWorld(const glm::vec2 &screenPoint);
     glm::vec2 worldToScreen(const glm::vec2 &worldPoint);
+    glm::vec2 getViewportSize() const { return m_viewportSize; }
 
     void onEvent(const CameraEvent &event);
 

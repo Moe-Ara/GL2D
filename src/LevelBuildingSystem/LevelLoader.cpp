@@ -9,6 +9,7 @@
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Components/TriggerComponent.hpp"
 #include "GameObjects/Components/TilemapComponent.hpp"
+#include "GameObjects/Components/LightingComponent.hpp"
 #include "GameObjects/Prefabs/PrefabCatalouge.hpp"
 #include "Managers/TilemapManager.hpp"
 #include "Managers/TilesetManager.hpp"
@@ -25,6 +26,7 @@ Level LevelLoader::loadFromData(const LevelData &data) {
     level.id = data.metadata.name;
     level.camera = data.camera;
     level.regions = data.regions;
+    level.lights = data.lights;
 
     std::vector<PlacedEntitySpec> placements;
     placements.reserve(data.instances.size());
@@ -87,6 +89,36 @@ Level LevelLoader::loadFromData(const LevelData &data) {
         level.entities.push_back(std::move(trigEntity));
     }
 
+    auto toLightType = [](const std::string& typeStr) {
+        if (typeStr == "Directional" || typeStr == "DIRECTIONAL" || typeStr == "directional") return LightType::DIRECTIONAL;
+        if (typeStr == "Spot" || typeStr == "SPOT" || typeStr == "spot") return LightType::SPOT;
+        return LightType::POINT;
+    };
+
+    // Lights as standalone entities to be picked up by the lighting pass.
+    for (const auto &light : data.lights) {
+        auto lightEntity = std::make_unique<Entity>();
+        auto &transform = lightEntity->addComponent<TransformComponent>();
+        transform.setPosition(light.pos);
+
+        auto lightComp = std::make_unique<LightingComponent>(
+                light.id.empty() ? "light" : light.id,
+                toLightType(light.type),
+                glm::vec2(0.0f),
+                light.radius,
+                light.color,
+                light.intensity,
+                light.falloff,
+                light.emissiveBoost,
+                light.dir,
+                light.innerCutoff,
+                light.outerCutoff,
+                light.cookie,
+                light.cookieStrength);
+        lightEntity->addComponent(std::move(lightComp));
+        level.entities.push_back(std::move(lightEntity));
+    }
+
     return level;
 }
 
@@ -119,6 +151,9 @@ Level LevelLoader::loadFromFile(const std::string &path) {
         if (arr.size() < 4) return fallback;
         return glm::vec4(static_cast<float>(arr[0].asNumber()), static_cast<float>(arr[1].asNumber()),
                          static_cast<float>(arr[2].asNumber()), static_cast<float>(arr[3].asNumber()));
+    };
+    auto getNumber = [](const Utils::JsonValue &node, float fallback = 0.0f) {
+        return node.isNumber() ? static_cast<float>(node.asNumber()) : fallback;
     };
 
     LevelData data{};
@@ -172,6 +207,26 @@ Level LevelLoader::loadFromFile(const std::string &path) {
             if (entry.hasKey("tint")) region.tint = getVec3(entry.at("tint"), {1.0f,1.0f,1.0f});
             if (entry.hasKey("ambientId")) region.ambientId = entry.at("ambientId").asString();
             data.regions.push_back(region);
+        }
+    }
+
+    if (root.hasKey("lights")) {
+        for (const auto &entry : root.at("lights").asArray()) {
+            LevelLight light{};
+            if (entry.hasKey("id")) light.id = entry.at("id").asString();
+            if (entry.hasKey("type")) light.type = entry.at("type").asString();
+            if (entry.hasKey("pos")) light.pos = getVec2(entry.at("pos"));
+            if (entry.hasKey("dir")) light.dir = getVec2(entry.at("dir"), {0.0f, -1.0f});
+            if (entry.hasKey("color")) light.color = getVec3(entry.at("color"), {1.0f, 1.0f, 1.0f});
+            if (entry.hasKey("radius")) light.radius = static_cast<float>(entry.at("radius").asNumber());
+            if (entry.hasKey("intensity")) light.intensity = static_cast<float>(entry.at("intensity").asNumber());
+            if (entry.hasKey("falloff")) light.falloff = static_cast<float>(entry.at("falloff").asNumber());
+            if (entry.hasKey("emissiveBoost")) light.emissiveBoost = static_cast<float>(entry.at("emissiveBoost").asNumber());
+            if (entry.hasKey("innerCutoff")) light.innerCutoff = getNumber(entry.at("innerCutoff"), light.innerCutoff);
+            if (entry.hasKey("outerCutoff")) light.outerCutoff = getNumber(entry.at("outerCutoff"), light.outerCutoff);
+            if (entry.hasKey("cookie")) light.cookie = entry.at("cookie").asString();
+            if (entry.hasKey("cookieStrength")) light.cookieStrength = getNumber(entry.at("cookieStrength"), light.cookieStrength);
+            data.lights.push_back(light);
         }
     }
 

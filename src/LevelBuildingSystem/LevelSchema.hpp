@@ -74,6 +74,22 @@ struct LevelTrigger {
     TriggerActivation activation{TriggerActivation::OnEnter};
 };
 
+struct LevelLight {
+    std::string id;
+    std::string type{"Point"};
+    glm::vec2 pos{0.0f, 0.0f};
+    glm::vec2 dir{0.0f, -1.0f};
+    glm::vec3 color{1.0f, 1.0f, 1.0f};
+    float radius{4.0f};
+    float intensity{1.0f};
+    float falloff{2.0f};
+    float emissiveBoost{0.0f};
+    float innerCutoff{0.9f}; // cos(theta) preferred; loader accepts degrees if provided
+    float outerCutoff{0.7f};
+    std::string cookie{};
+    float cookieStrength{0.0f};
+};
+
 struct LevelData {
     LevelMetadata metadata{};
     CameraSettings camera{};
@@ -89,6 +105,7 @@ struct LevelData {
         std::string ambientId{};
     };
     std::vector<Region> regions{};
+    std::vector<LevelLight> lights{};
 };
 
 #endif //GL2D_LEVELSCHEMA_HPP

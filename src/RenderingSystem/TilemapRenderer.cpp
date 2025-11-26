@@ -127,6 +127,18 @@ namespace {
 
 void TilemapRenderer::render(Scene &scene, Camera &camera, const glm::mat4 &viewProj) {
     static std::shared_ptr<Graphics::Shader> shader = std::make_shared<Graphics::Shader>("Shaders/vertex.vert", "Shaders/fragment.frag");
+    static GLuint s_defaultNormal = 0;
+    if (s_defaultNormal == 0) {
+        glGenTextures(1, &s_defaultNormal);
+        glBindTexture(GL_TEXTURE_2D, s_defaultNormal);
+        const unsigned char flat[4] = {128, 128, 255, 255};
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, flat);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 
     for (auto &entityPtr : scene.getEntities()) {
         if (!entityPtr) continue;
@@ -149,9 +161,12 @@ void TilemapRenderer::render(Scene &scene, Camera &camera, const glm::mat4 &view
         shader->setUniformMat4("projection", viewProj);
         shader->setUniformMat4("transform", glm::mat4(1.0f));
         shader->setUniformInt1("spriteTexture", 0);
+        shader->setUniformInt1("normalTexture", 1);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, tileset->texture->getID());
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_defaultNormal);
 
         glBindVertexArray(cache.vao);
         glDrawElements(GL_TRIANGLES, cache.indexCount, GL_UNSIGNED_INT, nullptr);

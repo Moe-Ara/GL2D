@@ -81,8 +81,7 @@ namespace Graphics {
 
     GLint Shader::getUniformLocation(const GLchar *name) const {
         GLint location = glGetUniformLocation(m_shaderID, name);
-        if (location == -1)
-            std::cerr << "Warning: Uniform '" << name << "' does not exist or is optimized out.\n";
+        // Some drivers optimize out unused uniforms; avoid noisy warnings.
         return location;
     }
 
