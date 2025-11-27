@@ -258,7 +258,7 @@ namespace InputSystem {
         if (binding.deviceType == InputDeviceType::Unknown) {
             throw Utils::JsonParseException("Unknown device type '" + deviceToken + "' in binding");
         }
-        binding.controlId = resolveControlId(binding.deviceType, binding.controlToken);
+        binding.controlId = resolveControlId(binding.deviceType, binding.controlToken, binding.isAxis);
         return binding;
     }
 
@@ -271,7 +271,8 @@ namespace InputSystem {
         return InputDeviceType::Unknown;
     }
 
-    int InputBindingsLoader::resolveControlId(InputDeviceType deviceType, const std::string &controlToken) {
+    int InputBindingsLoader::resolveControlId(InputDeviceType deviceType, const std::string &controlToken, bool& isAxisOut) {
+        isAxisOut = false;
         switch (deviceType) {
             case InputDeviceType::Keyboard: {
                 auto it = keyboardMap().find(controlToken);
@@ -287,7 +288,10 @@ namespace InputSystem {
                 auto buttonIt = gamepadButtonMap().find(controlToken);
                 if (buttonIt != gamepadButtonMap().end()) return buttonIt->second;
                 auto axisIt = gamepadAxisMap().find(controlToken);
-                if (axisIt != gamepadAxisMap().end()) return axisIt->second;
+                if (axisIt != gamepadAxisMap().end()) {
+                    isAxisOut = true;
+                    return axisIt->second;
+                }
                 break;
             }
             default:

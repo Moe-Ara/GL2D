@@ -88,13 +88,15 @@ void InputService::loadBindingsFromFile(const std::string &filepath, const std::
 void InputService::setBindings(InputSystem::InputBindings bindings, const std::string &defaultProfile) {
     m_bindings = std::move(bindings);
     m_hasBindings = true;
+    // Pick profile: explicit default, else gamepad if connected, else first.
     if (!defaultProfile.empty()) {
         m_activeProfile = defaultProfile;
+    } else if (hasConnectedGamepad() && findProfile("gamepad")) {
+        m_activeProfile = "gamepad";
     } else if (m_activeProfile.empty() && !m_bindings.profiles.empty()) {
         m_activeProfile = m_bindings.profiles.front().name;
     }
     rebuildBindingLookup();
-    resolveActionEvents();
 }
 
 bool InputService::setActiveProfile(const std::string &profileName) {
@@ -107,7 +109,6 @@ bool InputService::setActiveProfile(const std::string &profileName) {
     }
     m_activeProfile = profileName;
     rebuildBindingLookup();
-    resolveActionEvents();
     return true;
 }
 
@@ -145,18 +146,22 @@ void InputService::handleGamepadConnected(int jid) {
     device.connected = true;
     m_devices[jid] = device;
     m_gamepadStates[jid] = GamepadState{};
-    std::cout << "[Input] Gamepad connected: " << device.name << " (id=" << jid << ")" << std::endl;
+    // Auto-switch to gamepad profile if available.
+    if (m_hasBindings && findProfile("gamepad")) {
+        setActiveProfile("gamepad");
+    }
 }
 
 void InputService::handleGamepadDisconnected(int jid) {
     auto it = m_devices.find(jid);
     if (it != m_devices.end()) {
-        std::cout << "[Input] Gamepad disconnected: " << it->second.name << " (id=" << jid << ")" << std::endl;
         m_devices.erase(it);
-    } else {
-        std::cout << "[Input] Gamepad disconnected (id=" << jid << ")" << std::endl;
     }
     m_gamepadStates.erase(jid);
+    // Fallback to default profile when no gamepads remain.
+    if (!hasConnectedGamepad() && m_hasBindings && !m_bindings.profiles.empty()) {
+        setActiveProfile(m_bindings.profiles.front().name);
+    }
 }
 
 void InputService::processGamepadState(int jid, const GLFWgamepadstate &state, double timestamp) {
@@ -301,11 +306,37 @@ void InputService::joystickCallback(int jid, int event) {
 
 void InputService::resolveActionEvents() {
     m_actionEvents.clear();
-    if (!m_hasBindings || m_bindingLookup.empty()) {
+    if (!m_hasBindings) {
         return;
     }
+
+    // Auto-switch profile based on the most recent device that produced events this frame.
+    InputDeviceType lastDeviceSeen = InputDeviceType::Unknown;
+    for (const auto& evt : m_eventBuffer) {
+        if (evt.deviceType == InputDeviceType::Gamepad ||
+            evt.deviceType == InputDeviceType::Keyboard ||
+            evt.deviceType == InputDeviceType::Mouse) {
+            lastDeviceSeen = evt.deviceType;
+        }
+    }
+    if (lastDeviceSeen == InputDeviceType::Gamepad && findProfile("gamepad") && m_activeProfile != "gamepad") {
+        setActiveProfile("gamepad");
+        m_lastProfileDevice = InputDeviceType::Gamepad;
+    } else if ((lastDeviceSeen == InputDeviceType::Keyboard || lastDeviceSeen == InputDeviceType::Mouse) &&
+               findProfile("keyboard_mouse") && m_activeProfile != "keyboard_mouse") {
+        setActiveProfile("keyboard_mouse");
+        m_lastProfileDevice = InputDeviceType::Keyboard;
+    }
+
+    if (m_bindingLookup.empty()) {
+        rebuildBindingLookup();
+    }
+    if (m_bindingLookup.empty()) return;
+
+    std::size_t resolvedCount = 0;
     for (const auto &evt: m_eventBuffer) {
-        BindingKey key{evt.deviceType, evt.controlId};
+        const bool isAxis = evt.type == InputEventType::AxisChanged;
+        BindingKey key{evt.deviceType, evt.controlId, isAxis};
         auto it = m_bindingLookup.find(key);
         if (it == m_bindingLookup.end()) continue;
         for (const auto &actionName: it->second) {
@@ -316,6 +347,7 @@ void InputService::resolveActionEvents() {
             actionEvt.timestampSeconds = evt.timestampSeconds;
             actionEvt.sourceEvent = evt;
             m_actionEvents.push_back(actionEvt);
+            ++resolvedCount;
         }
     }
 }
@@ -333,7 +365,7 @@ void InputService::rebuildBindingLookup() {
         return;
     }
     for (const auto &binding: profile->bindings) {
-        BindingKey key{binding.deviceType, binding.controlId};
+        BindingKey key{binding.deviceType, binding.controlId, binding.isAxis};
         m_bindingLookup[key].push_back(binding.actionName);
     }
 }
@@ -346,4 +378,11 @@ InputService::findProfile(const std::string &profileName) const {
         }
     }
     return nullptr;
+}
+
+bool InputService::hasConnectedGamepad() const {
+    for (const auto& [id, dev] : m_devices) {
+        if (dev.type == InputDeviceType::Gamepad && dev.connected) return true;
+    }
+    return false;
 }

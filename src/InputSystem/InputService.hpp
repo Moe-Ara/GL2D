@@ -53,15 +53,17 @@ private:
     struct BindingKey {
         InputDeviceType deviceType{InputDeviceType::Unknown};
         int controlId{0};
+        bool isAxis{false};
         bool operator==(const BindingKey& other) const {
-            return deviceType == other.deviceType && controlId == other.controlId;
+            return deviceType == other.deviceType && controlId == other.controlId && isAxis == other.isAxis;
         }
     };
 
     struct BindingKeyHasher {
         std::size_t operator()(const BindingKey& key) const noexcept {
-            return (static_cast<std::size_t>(key.controlId) << 3) ^
-                   static_cast<std::size_t>(key.deviceType);
+            return (static_cast<std::size_t>(key.controlId) << 4) ^
+                   (static_cast<std::size_t>(key.deviceType) << 1) ^
+                   static_cast<std::size_t>(key.isAxis);
         }
     };
 
@@ -76,6 +78,7 @@ private:
     void detectConnectedGamepads();
     void handleGamepadConnected(int jid);
     void handleGamepadDisconnected(int jid);
+    bool hasConnectedGamepad() const;
     void processGamepadState(int jid, const GLFWgamepadstate& state, double timestamp);
     void resolveActionEvents();
     void rebuildBindingLookup();
@@ -91,6 +94,7 @@ private:
     bool m_cursorInitialized{false};
     void registerBuiltinDevices();
     static InputService* s_activeService;
+    InputDeviceType m_lastProfileDevice{InputDeviceType::Unknown};
 
     InputSystem::InputBindings m_bindings;
     bool m_hasBindings{false};

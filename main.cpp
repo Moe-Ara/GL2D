@@ -2,6 +2,7 @@
 #include "GameObjects/Components/AnimatorComponent.hpp"
 #include "GameObjects/Components/ColliderComponent.hpp"
 #include "GameObjects/Components/RigidBodyComponent.hpp"
+#include "GameObjects/Components/GroundSensorComponent.hpp"
 #include "GameObjects/Components/SpriteComponent.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Entity.hpp"
@@ -18,6 +19,8 @@
 #include "RenderingSystem/RenderSystem.hpp"
 #include "RenderingSystem/Renderer.hpp"
 #include "RenderingSystem/ParticleRenderer.hpp"
+#include "GameObjects/Components/ControllerComponent.hpp"
+#include "Engine/PlayerController.hpp"
 #include "ParticleSystem/ParticleSystem.hpp"
 #include "ParticleSystem/ParticleEffectLoader.hpp"
 #include "GameObjects/Components/LightingComponent.hpp"
@@ -132,63 +135,6 @@ AnimationLoadResult loadAnimationsFromMetadata(const std::string &metadataPath) 
 
     return result;
 }
-
-class PlayerMover : public IUpdatableComponent {
-public:
-    PlayerMover(InputService &input, RigidBodyComponent *rigidBody, float moveSpeed, float jumpImpulse, float groundY)
-            : m_input(input), m_rigidBody(rigidBody), m_moveSpeed(moveSpeed), m_jumpImpulse(jumpImpulse), m_groundY(groundY) {}
-
-    void update(Entity & /*owner*/, double dt) override {
-        if (!m_rigidBody || !m_rigidBody->body()) {
-            return;
-        }
-
-        bool jumpPressed = false;
-        for (const auto &evt : m_input.getActionEvents()) {
-            const bool pressed = evt.eventType == InputEventType::ButtonPressed;
-            const bool released = evt.eventType == InputEventType::ButtonReleased;
-            if (evt.actionName == "MoveLeft") {
-                if (pressed) m_moveLeft = true;
-                else if (released) m_moveLeft = false;
-            }
-            if (evt.actionName == "MoveRight") {
-                if (pressed) m_moveRight = true;
-                else if (released) m_moveRight = false;
-            }
-            if (evt.actionName == "Jump" && pressed) {
-                jumpPressed = true;
-            }
-        }
-
-        float desiredDir = (m_moveRight ? 1.0f : 0.0f) - (m_moveLeft ? 1.0f : 0.0f);
-
-        auto *body = m_rigidBody->body();
-        auto velocity = body->getVelocity();
-        velocity.x = desiredDir * m_moveSpeed;
-
-        const float groundedPosEpsilon = PhysicsUnits::toUnits(0.05f);
-        const float groundedVelEpsilon = PhysicsUnits::toUnits(0.015f);
-        const bool grounded = body->getPosition().y <= m_groundY + groundedPosEpsilon &&
-                              std::abs(velocity.y) <= groundedVelEpsilon;
-        if (jumpPressed && grounded) {
-            velocity.y = m_jumpImpulse;
-        } else if (grounded && velocity.y < 0.0f) {
-            // Snap small downward drift to zero when on ground.
-            velocity.y = 0.0f;
-        }
-
-        body->setVelocity(velocity);
-    }
-
-private:
-    InputService &m_input;
-    RigidBodyComponent *m_rigidBody{nullptr};
-    float m_moveSpeed{PhysicsUnits::toUnits(1.5f)};
-    float m_jumpImpulse{PhysicsUnits::toUnits(4.8f)};
-    float m_groundY{0.0f};
-    bool m_moveLeft{false};
-    bool m_moveRight{false};
-};
 
 int main() {
     if (!glfwInit()) {
@@ -309,16 +255,14 @@ int main() {
     player.addComponent<SpriteComponent>(playerSprite.get(), 0);
     player.addComponent<AnimatorComponent>(playerAnimator.get());
     auto &playerCollider = player.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -12.0f);
+    auto &playerSensor = player.addComponent<GroundSensorComponent>();
+    playerSensor.setWorldEntities(&scene.getEntities());
     auto playerBody = std::make_unique<RigidBody>(1.0f, RigidBodyType::DYNAMIC);
     playerBody->setLinearDamping(6.0f);
     playerBody->setTransform(&playerTransform.getTransform());
     auto &playerRb = player.addComponent<RigidBodyComponent>(std::move(playerBody));
-    player.addComponent<PlayerMover>(
-        inputService,
-        &playerRb,
-        PhysicsUnits::toUnits(2.5f),
-        PhysicsUnits::toUnits(4.8f),
-        groundTransform.getTransform().Position.y + PhysicsUnits::toUnits(0.8f));
+    auto controller = std::make_unique<PlayerController>(inputService);
+    player.addComponent<ControllerComponent>(std::move(controller));
     playerCollider.ensureCollider(player);
 
     camera.setTarget(&playerTransform.getTransform());
