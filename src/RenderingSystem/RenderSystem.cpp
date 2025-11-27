@@ -9,6 +9,7 @@
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "Graphics/Camera/Camera.hpp"
 #include "GameObjects/Components/ColliderComponent.hpp"
+#include "GameObjects/Components/GroundSensorComponent.hpp"
 #include "Debug/DebugOverlay.hpp"
 #include "GameObjects/Sprite.hpp"
 #include "RenderingSystem/TilemapRenderer.hpp"
@@ -134,16 +135,6 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
     renderer.endFrame();
     rt.unbind();
 
-    // Debug: draw collider wireframes when overlay is enabled.
-    if (DebugOverlay::enabled()) {
-        for (auto &entityPtr : scene.getEntities()) {
-            if (!entityPtr) continue;
-            auto *colliderComp = entityPtr->getComponent<ColliderComponent>();
-            if (!colliderComp) continue;
-            colliderComp->debugDraw(viewProj, {1.0f, 0.0f, 0.0f});
-        }
-    }
-
     // Gather lights (culled to the camera view with padding).
     std::vector<Light> lights;
     std::vector<GLuint> cookieTextures;
@@ -223,6 +214,21 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
     // Composite the off-screen color with the lighting pass.
     glViewport(0, 0, fbWidth, fbHeight);
     Rendering::LightingPass::draw(rt, lights, camera.getViewBounds(/*paddingFactor=*/0.0f), cookieTextures, ambientColor);
+
+    // Debug: draw collider wireframes and sensors on top of lighting when overlay is enabled.
+    if (DebugOverlay::enabled()) {
+        glDisable(GL_BLEND); // simple lines over lit scene
+        for (auto &entityPtr : scene.getEntities()) {
+            if (!entityPtr) continue;
+            if (auto *colliderComp = entityPtr->getComponent<ColliderComponent>()) {
+                colliderComp->debugDraw(viewProj, {1.0f, 0.0f, 0.0f});
+            }
+            if (auto* sensor = entityPtr->getComponent<GroundSensorComponent>()) {
+                sensor->debugDraw(viewProj, *entityPtr, {0.2f, 0.9f, 0.2f}, {0.2f, 0.6f, 1.0f});
+            }
+        }
+        glEnable(GL_BLEND);
+    }
 }
 
 void RenderSystem::applyFeeling(const FeelingsSystem::FeelingSnapshot &snapshot) {

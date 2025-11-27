@@ -2,6 +2,7 @@
   "actions": [
     { "name": "MoveLeft",  "type": "button", "description": "Character strafe left" },
     { "name": "MoveRight", "type": "button" },
+    { "name": "MoveHorizontal", "type": "axis1d" },
     { "name": "Jump",      "type": "button" },
     { "name": "BlinkTrigger", "type": "button", "animationCondition": "triggerBlink" }
   ],
@@ -24,6 +25,9 @@
     {
       "name": "gamepad",
       "bindings": [
+        { "device": "gamepad", "control": "AXIS_LEFT_X", "action": "MoveHorizontal" },
+        { "device": "gamepad", "control": "BUTTON_DPAD_LEFT",  "action": "MoveLeft" },
+        { "device": "gamepad", "control": "BUTTON_DPAD_RIGHT", "action": "MoveRight" },
         { "device": "gamepad", "control": "BUTTON_A",      "action": "Jump" },
         { "device": "gamepad", "control": "BUTTON_X",      "action": "BlinkTrigger" }
       ]

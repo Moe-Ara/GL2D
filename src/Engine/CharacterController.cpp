@@ -6,6 +6,9 @@
 #include "GameObjects/Entity.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Components/SpriteComponent.hpp"
+#include "GameObjects/Components/RigidBodyComponent.hpp"
+#include "GameObjects/Components/GroundSensorComponent.hpp"
+#include "Physics/RigidBody.hpp"
 
 namespace {
 constexpr float kAxisEpsilon = 0.001f;
@@ -20,50 +23,88 @@ void CharacterController::update(Entity &entity, double deltaTime) {
     auto *spriteComp = entity.getComponent<SpriteComponent>();
     auto *sprite = spriteComp ? spriteComp->sprite() : nullptr;
     auto &transform = transformComp->getTransform();
+    auto *rbComp = entity.getComponent<RigidBodyComponent>();
+    RigidBody* body = rbComp ? rbComp->body() : nullptr;
 
     Intent intent = gatherIntent(entity, deltaTime);
 
     if (!m_groundInitialized) {
-        m_groundLevel = transform.Position.y;
+        // Assume ground at world y=0 for simple platformer movement; adjust as needed per level.
+        m_groundLevel = 0.0f;
         m_groundInitialized = true;
     }
 
     const float dtf = static_cast<float>(deltaTime);
     const float desiredDir = std::clamp(intent.moveAxis, -1.0f, 1.0f);
+    const float targetVelX = std::abs(desiredDir) > kAxisEpsilon ? desiredDir * m_moveSpeed * std::abs(desiredDir) : 0.0f;
 
-    if (std::abs(desiredDir) > kAxisEpsilon) {
-        m_velocity.x += desiredDir * m_acceleration * dtf;
-        m_velocity.x = std::clamp(m_velocity.x, -m_moveSpeed, m_moveSpeed);
+    // Smoothly approach target velocity using acceleration as the rate.
+    const float accelStep = m_acceleration * dtf;
+    if (std::abs(targetVelX - m_velocity.x) <= accelStep) {
+        m_velocity.x = targetVelX;
     } else {
-        const float decel = m_deceleration * dtf;
-        if (std::abs(m_velocity.x) <= decel) {
-            m_velocity.x = 0.0f;
-        } else {
-            m_velocity.x -= decel * (m_velocity.x > 0.0f ? 1.0f : -1.0f);
+        m_velocity.x += (targetVelX > m_velocity.x ? 1.0f : -1.0f) * accelStep;
+    }
+
+    auto* sensor = entity.getComponent<GroundSensorComponent>();
+    if (sensor) {
+        if (m_worldEntities) {
+            sensor->setWorldEntities(m_worldEntities);
         }
+        if (!m_sensorCallbacksBound) {
+            sensor->setCallbacks([this](Entity& e) { onLanded(e); },
+                                 [this](Entity& e) { onLeftGround(e); });
+            m_sensorCallbacksBound = true;
+        }
+        sensor->refresh(entity); // Avoid ordering issues if controller runs before sensor component.
+        m_wallContact = sensor->hasWallContact();
+        m_wallNormal = sensor->wallNormal();
+    } else {
+        m_wallContact = false;
+        m_wallNormal = glm::vec2{0.0f};
     }
+    const bool groundedBySensor = sensor && sensor->isGrounded();
 
-    if (intent.jumpPressed && m_isGrounded) {
-        m_velocity.y = m_jumpImpulse;
-        m_isGrounded = false;
-    }
+    if (body) {
+        auto vel = body->getVelocity();
+        vel.x = m_velocity.x;
 
-    if (!m_isGrounded) {
-        m_velocity.y -= m_gravity * dtf;
-    }
+        const float groundedVelEps = PhysicsUnits::toUnits(0.015f);
+        m_isGrounded = groundedBySensor || (std::abs(vel.y) <= groundedVelEps);
+        if (intent.jumpPressed && m_isGrounded) {
+            vel.y = m_jumpImpulse;
+            m_isGrounded = false;
+        }
+        if (!m_isGrounded) {
+            vel.y -= m_gravity * dtf;
+        }
 
-    glm::vec2 position = transform.Position;
-    position += m_velocity * dtf;
+        body->setVelocity(vel);
+    } else {
+        const bool groundedByVel = std::abs(m_velocity.y) <= PhysicsUnits::toUnits(0.015f);
+        m_isGrounded = groundedBySensor || groundedByVel;
+        if (intent.jumpPressed && m_isGrounded) {
+            m_velocity.y = m_jumpImpulse;
+            m_isGrounded = false;
+        }
 
-    if (position.y <= m_groundLevel) {
-        position.y = m_groundLevel;
-        m_velocity.y = 0.0f;
-        m_isGrounded = true;
-    }
+        if (!m_isGrounded) {
+            m_velocity.y -= m_gravity * dtf;
+        }
 
-    transform.setPos(position);
-    if (sprite) {
-        sprite->setPosition(position);
+        glm::vec2 position = transform.Position;
+        position += m_velocity * dtf;
+
+        if (position.y <= m_groundLevel) {
+            position.y = m_groundLevel;
+            m_velocity.y = 0.0f;
+            m_isGrounded = true;
+        }
+
+        transform.setPos(position);
+        if (sprite) {
+            sprite->setPosition(position);
+        }
     }
 }
 

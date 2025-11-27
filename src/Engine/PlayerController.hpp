@@ -22,6 +22,8 @@ private:
     bool m_moveLeft{false};
     bool m_moveRight{false};
     bool m_jumpQueued{false};
+    float m_axisX{0.0f};
+    bool m_axisUpdated{false};
 };
 
 #endif

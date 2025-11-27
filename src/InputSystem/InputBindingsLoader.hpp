@@ -26,6 +26,7 @@ namespace InputSystem {
     struct ControlBinding {
         InputDeviceType deviceType{InputDeviceType::Unknown};
         int controlId{-1};                // Numeric code resolved during loading
+        bool isAxis{false};               // Whether this binding refers to an axis input
         std::string controlToken;         // Original token from JSON (e.g., "KEY_A")
         std::string actionName;
     };
@@ -53,7 +54,7 @@ namespace InputSystem {
         static ControlBinding parseBinding(const Utils::JsonValue &node);
 
         static InputDeviceType parseDeviceType(const std::string &deviceToken);
-        static int resolveControlId(InputDeviceType deviceType, const std::string &controlToken);
+        static int resolveControlId(InputDeviceType deviceType, const std::string &controlToken, bool& isAxisOut);
     };
 
 } // namespace InputSystem
