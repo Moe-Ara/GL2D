@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include <glm/glm.hpp>
+
 #include "GameObjects/Entity.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Components/SpriteComponent.hpp"
@@ -36,7 +38,39 @@ void CharacterController::update(Entity &entity, double deltaTime) {
 
     const float dtf = static_cast<float>(deltaTime);
     const float desiredDir = std::clamp(intent.moveAxis, -1.0f, 1.0f);
-    const float targetVelX = std::abs(desiredDir) > kAxisEpsilon ? desiredDir * m_moveSpeed * std::abs(desiredDir) : 0.0f;
+    const float axisMag = std::abs(desiredDir);
+
+    // Hysteresis: small gap between walk and run thresholds to avoid rapid flipping.
+    MoveMode currentMode = m_lastMoveMode;
+    if (axisMag <= kAxisEpsilon) {
+        currentMode = MoveMode::Idle;
+    } else {
+        const float walkEnd = m_walkAxisThreshold;
+        const float runStart = m_runAxisThreshold;
+        switch (m_lastMoveMode) {
+            case MoveMode::Idle:
+                currentMode = (axisMag <= walkEnd) ? MoveMode::Walk : MoveMode::Run;
+                break;
+            case MoveMode::Walk:
+                currentMode = (axisMag >= runStart) ? MoveMode::Run : MoveMode::Walk;
+                break;
+            case MoveMode::Run:
+                currentMode = (axisMag <= walkEnd) ? MoveMode::Walk : MoveMode::Run;
+                break;
+        }
+    }
+
+    float speedCap = m_moveSpeed;
+    if (currentMode == MoveMode::Walk) {
+        speedCap *= m_walkSpeedMultiplier;
+    }
+    const float scaledAxis = std::clamp(axisMag, 0.0f, 1.0f);
+    const float targetVelX = scaledAxis > kAxisEpsilon ? desiredDir * (speedCap * scaledAxis) : 0.0f;
+
+    if (currentMode != m_lastMoveMode) {
+
+        m_lastMoveMode = currentMode;
+    }
 
     // Smoothly approach target velocity using acceleration as the rate.
     const float accelStep = m_acceleration * dtf;
@@ -64,10 +98,19 @@ void CharacterController::update(Entity &entity, double deltaTime) {
         m_wallNormal = glm::vec2{0.0f};
     }
     const bool groundedBySensor = sensor && sensor->isGrounded();
+    const bool platformContact = sensor && sensor->hasPlatformContact();
+    glm::vec2 platformVelocity{0.0f};
+    if (platformContact) {
+        platformVelocity = sensor->platformVelocity();
+    }
+    const glm::vec2 platformDelta = platformVelocity * dtf;
 
     if (body) {
         auto vel = body->getVelocity();
         vel.x = m_velocity.x;
+        if (platformContact && glm::length(platformDelta) > kAxisEpsilon) {
+            body->setPosition(body->getPosition() + platformDelta);
+        }
 
         const float groundedVelEps = PhysicsUnits::toUnits(0.015f);
         m_isGrounded = groundedBySensor || (std::abs(vel.y) <= groundedVelEps);
@@ -94,6 +137,9 @@ void CharacterController::update(Entity &entity, double deltaTime) {
 
         glm::vec2 position = transform.Position;
         position += m_velocity * dtf;
+        if (platformContact) {
+            position += platformDelta;
+        }
 
         if (position.y <= m_groundLevel) {
             position.y = m_groundLevel;
@@ -126,4 +172,12 @@ void CharacterController::resetFeelingOverrides() {
     m_deceleration = m_baseDeceleration;
     m_jumpImpulse = m_baseJumpImpulse;
     m_gravity = m_baseGravity;
+}
+
+void CharacterController::resetVelocity() {
+    m_velocity = glm::vec2{0.0f};
+}
+
+void CharacterController::setVelocity(const glm::vec2& velocity) {
+    m_velocity = velocity;
 }

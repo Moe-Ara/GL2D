@@ -44,6 +44,7 @@ void Scene::update(float deltaTime) {
     for(auto& e: m_entities){
         e->update(deltaTime);
     }
+    m_waterSystem.update(deltaTime, m_entities, m_physicsEngine.getGravity());
     m_physicsEngine.step(deltaTime, m_entities);
     m_triggerSystem.update(m_entities);
 }

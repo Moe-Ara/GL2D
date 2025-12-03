@@ -9,6 +9,7 @@
 #include "GameObjects/Entity.hpp"
 #include "Physics/PhysicsEngine.hpp"
 #include "Physics/TriggerSystem.hpp"
+#include "Physics/WaterSystem.hpp"
 #include "Graphics/Camera/Camera.hpp"
 #include "RenderingSystem/Renderer.hpp"
 #include "FeelingsSystem/FeelingsSystem.hpp"
@@ -42,6 +43,7 @@ private:
     std::vector<std::unique_ptr<Entity>> m_entities;
     PhysicsEngine m_physicsEngine{};
     TriggerSystem m_triggerSystem{};
+    WaterSystem m_waterSystem{};
     FeelingsSystem::FeelingsSystem m_feelingsSystem{};
     bool m_paused{false};
 };

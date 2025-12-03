@@ -4,6 +4,7 @@
     { "name": "MoveRight", "type": "button" },
     { "name": "MoveHorizontal", "type": "axis1d" },
     { "name": "Jump",      "type": "button" },
+    { "name": "Interact",  "type": "button", "description": "Interact / mount / use" },
     { "name": "BlinkTrigger", "type": "button", "animationCondition": "triggerBlink" }
   ],
 
@@ -19,6 +20,7 @@
         { "device": "keyboard", "control": "KEY_A", "action": "MoveLeft" },
         { "device": "keyboard", "control": "KEY_D", "action": "MoveRight" },
         { "device": "keyboard", "control": "KEY_SPACE", "action": "Jump" },
+        { "device": "keyboard", "control": "KEY_E", "action": "Interact" },
         { "device": "mouse",    "control": "BUTTON_LEFT", "action": "BlinkTrigger" }
       ]
     },
@@ -29,6 +31,7 @@
         { "device": "gamepad", "control": "BUTTON_DPAD_LEFT",  "action": "MoveLeft" },
         { "device": "gamepad", "control": "BUTTON_DPAD_RIGHT", "action": "MoveRight" },
         { "device": "gamepad", "control": "BUTTON_A",      "action": "Jump" },
+        { "device": "gamepad", "control": "BUTTON_X",      "action": "Interact" },
         { "device": "gamepad", "control": "BUTTON_X",      "action": "BlinkTrigger" }
       ]
     }

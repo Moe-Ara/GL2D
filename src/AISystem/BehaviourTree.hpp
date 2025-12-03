@@ -5,6 +5,7 @@
 #include <functional>
 #include <unordered_map>
 #include <algorithm>
+#include <ostream>
 
 enum struct NodeType {
     Selector,
@@ -18,6 +19,15 @@ enum struct NodeStatus {
     Failure,
     Running
 };
+
+inline std::ostream& operator<<(std::ostream& os, const NodeStatus status) {
+    switch (status) {
+        case NodeStatus::Success: os << "Success"; break;
+        case NodeStatus::Failure: os << "Failure"; break;
+        case NodeStatus::Running: os << "Running"; break;
+    }
+    return os;
+}
 
 template<typename TContext>
 struct BTNode {

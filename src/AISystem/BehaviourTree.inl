@@ -143,7 +143,10 @@ NodeStatus BehaviourTree<TContext>::tickNode(Node& node, TContext* ctx, float dt
                     float& timer = m_cooldowns[&node];
                     if (timer > 0.0f) {
                         timer = std::max(0.0f, timer - dt);
-                        return NodeStatus::Failure;
+                        if (timer > 0.0f) {
+                            return NodeStatus::Failure;
+                        }
+                        // timer expired this tick; fall through and attempt child.
                     }
                     // Attempt child
                     auto childStatus = tickNode(*node.children[0], ctx, dt);
