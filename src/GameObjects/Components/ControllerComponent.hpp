@@ -12,6 +12,7 @@ public:
     explicit ControllerComponent(std::unique_ptr<IController> controller)
         : m_controller(std::move(controller)) {}
 
+
     void update(Entity& owner, double dt) override {
         if (m_controller && m_enabled) {
             m_controller->update(owner, dt);
