@@ -21,6 +21,7 @@ public:
         glm::vec2 normal{0.0f};
         glm::vec2 point{0.0f};
         float distance{0.0f};
+        Entity* entity{nullptr};
     };
 
     void update(Entity& owner, double /*dt*/) override;
@@ -31,6 +32,7 @@ public:
     void setProbeDistances(float groundDistance, float wallDistance) { m_groundProbeDistance = groundDistance; m_wallProbeDistance = wallDistance; }
     void setMinGroundNormalDot(float dot) { m_minGroundNormalDot = dot; }
     void setOffsets(float groundOffset, float wallOffset) { m_groundOffset = groundOffset; m_wallOffset = wallOffset; }
+    void setPlatformLayerMask(uint32_t mask) { m_platformLayerMask = mask; }
     void setCallbacks(std::function<void(Entity&)> landed, std::function<void(Entity&)> leftGround) {
         m_onLanded = std::move(landed);
         m_onLeftGround = std::move(leftGround);
@@ -44,6 +46,9 @@ public:
     const HitInfo& groundHit() const { return m_groundHit; }
     const HitInfo& leftWallHit() const { return m_leftWallHit; }
     const HitInfo& rightWallHit() const { return m_rightWallHit; }
+    bool hasPlatformContact() const { return m_platformEntity != nullptr; }
+    Entity* platformEntity() const { return m_platformEntity; }
+    glm::vec2 platformVelocity() const { return m_platformVelocity; }
     void debugDraw(const glm::mat4& viewProj,
                    Entity& owner,
                    const glm::vec3& groundColor = {0.2f, 0.9f, 0.2f},
@@ -56,12 +61,15 @@ private:
                        uint32_t mask,
                        Entity& owner) const;
     void updateGroundState(Entity& owner, bool groundedNow);
+    void resolvePlatformContact();
 
     std::vector<std::unique_ptr<Entity>>* m_worldEntities{nullptr};
 
     HitInfo m_groundHit{};
     HitInfo m_leftWallHit{};
     HitInfo m_rightWallHit{};
+    Entity* m_platformEntity{nullptr};
+    glm::vec2 m_platformVelocity{0.0f};
 
     bool m_grounded{false};
     bool m_justLanded{false};
@@ -77,6 +85,7 @@ private:
     float m_wallOffset{PhysicsUnits::toUnits(0.02f)};
     uint32_t m_groundLayerMask{0xFFFFFFFFu};
     uint32_t m_wallLayerMask{0xFFFFFFFFu};
+    uint32_t m_platformLayerMask{0u};
     bool m_includeTriggers{false};
 
     std::function<void(Entity&)> m_onLanded{};

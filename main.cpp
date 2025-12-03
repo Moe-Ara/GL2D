@@ -5,6 +5,8 @@
 #include "GameObjects/Components/GroundSensorComponent.hpp"
 #include "GameObjects/Components/SpriteComponent.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
+#include "GameObjects/Components/WaterStateComponent.hpp"
+#include "GameObjects/Components/WaterVolumeComponent.hpp"
 #include "GameObjects/Entity.hpp"
 #include "GameObjects/IComponent.hpp"
 #include "GameObjects/Sprite.hpp"
@@ -21,15 +23,20 @@
 #include "RenderingSystem/ParticleRenderer.hpp"
 #include "GameObjects/Components/ControllerComponent.hpp"
 #include "Engine/PlayerController.hpp"
+#include "Engine/VehicleController.hpp"
+#include "Engine/VehicleMountComponent.hpp"
+#include "Engine/SwimmingComponent.hpp"
 #include "ParticleSystem/ParticleSystem.hpp"
 #include "ParticleSystem/ParticleEffectLoader.hpp"
 #include "GameObjects/Components/LightingComponent.hpp"
 #include "AudioSystem/AudioManager.hpp"
 #include "UI/UILoader.hpp"
 #include "UI/UIElements.hpp"
+#include "UI/UIRenderer.hpp"
 #include "FeelingsSystem/FeelingsController.hpp"
 #include "FeelingsSystem/FeelingsSystem.hpp"
 #include "FeelingsSystem/FeelingsLoader.hpp"
+#include "Engine/DialogueSystem.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -45,6 +52,7 @@
 #include <unordered_map>
 #include <vector>
 #include <filesystem>
+#include <cstdint>
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -203,6 +211,7 @@ int main() {
 
     Scene scene;
     FeelingsSystem::FeelingsController feelingsController(scene.feelings());
+    DialogueSystem dialogue;
     // Load feelings config (if present) and apply a default feeling.
     try {
         const std::string feelingsPath = "assets/config/feelings.json";
@@ -226,6 +235,15 @@ int main() {
         startAnimation = animResult.animations.begin()->second;
     }
 
+    // Example line to verify dialogue overlay/voice; replace with your own content or remove.
+    dialogue.enqueue(DialogueSystem::Line{
+        .speaker = "Guide",
+        .text = "Welcome! Use A/D or the stick to move, and Space or gamepad A to jump.",
+        .audioTriggerId = "",
+        .audioPath = "",
+        .duckDb = -8.0f,
+        .duration = 0.0f});
+
     // Ground entity (static)
     Entity &ground = scene.createEntity();
     auto &groundTransform = ground.addComponent<TransformComponent>();
@@ -243,6 +261,23 @@ int main() {
     groundBody->setTransform(&groundTransform.getTransform());
     ground.addComponent<RigidBodyComponent>(std::move(groundBody));
 
+    // Simple rectangular water volume with mild current.
+    Entity &water = scene.createEntity();
+    auto &waterTransform = water.addComponent<TransformComponent>();
+    waterTransform.setPosition(glm::vec2{-400.0f, -120.0f});
+    auto waterSprite = std::make_shared<GameObjects::Sprite>(waterTransform.getTransform().Position,
+                                                             glm::vec2{1200.0f, 220.0f},
+                                                             glm::vec3{0.10f, 0.35f, 0.70f});
+    water.addComponent<SpriteComponent>(waterSprite.get(), -2);
+    auto &waterCollider = water.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
+    waterCollider.setTrigger(true);
+    auto &waterVolume = water.addComponent<WaterVolumeComponent>();
+    waterVolume.setDensity(1.05f);
+    waterVolume.setLinearDrag(10.0f);
+    waterVolume.setFlowVelocity(glm::vec2{PhysicsUnits::toUnits(0.6f), 0.0f});
+
+    constexpr uint32_t kMovingPlatformLayer = 1;
+
     // Player entity
     Entity &player = scene.createEntity();
     auto &playerTransform = player.addComponent<TransformComponent>();
@@ -257,17 +292,46 @@ int main() {
     auto &playerCollider = player.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -12.0f);
     auto &playerSensor = player.addComponent<GroundSensorComponent>();
     playerSensor.setWorldEntities(&scene.getEntities());
+    playerSensor.setPlatformLayerMask(1u << kMovingPlatformLayer);
     auto playerBody = std::make_unique<RigidBody>(1.0f, RigidBodyType::DYNAMIC);
     playerBody->setLinearDamping(6.0f);
     playerBody->setTransform(&playerTransform.getTransform());
     auto &playerRb = player.addComponent<RigidBodyComponent>(std::move(playerBody));
     auto controller = std::make_unique<PlayerController>(inputService);
     player.addComponent<ControllerComponent>(std::move(controller));
+    player.addComponent<WaterStateComponent>();
+    player.addComponent<SwimmingComponent>(inputService);
     playerCollider.ensureCollider(player);
 
     camera.setTarget(&playerTransform.getTransform());
     camera.setWorldBounds(glm::vec4{-1000.0f, -200.0f, 2000.0f, 800.0f});
 //    particleRenderer.setBorder({0.0f, 0.0f, 0.0f, 1.0f}, 0.00f); // black, thin outline
+
+    // Boat entity to exercise buoyancy and boat controller.
+    Entity &boat = scene.createEntity();
+    auto &boatTransform = boat.addComponent<TransformComponent>();
+    boatTransform.setPosition(glm::vec2{-220.0f, 20.0f});
+    auto boatSprite = std::make_shared<GameObjects::Sprite>(boatTransform.getTransform().Position,
+                                                            glm::vec2{220.0f, 90.0f},
+                                                            glm::vec3{0.45f, 0.25f, 0.12f});
+    boat.addComponent<SpriteComponent>(boatSprite.get(), -1);
+    auto &boatCollider = boat.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -6.0f);
+    boatCollider.setLayer(kMovingPlatformLayer);
+    auto boatBody = std::make_unique<RigidBody>(2.6f, RigidBodyType::DYNAMIC);
+    boatBody->setLinearDamping(3.0f);
+    boatBody->setTransform(&boatTransform.getTransform());
+    boat.addComponent<RigidBodyComponent>(std::move(boatBody));
+    boat.addComponent<WaterStateComponent>();
+    auto boatController = std::make_unique<VehicleController>(inputService);
+    boatController->setSeatOffset(glm::vec2{0.0f, boatSprite->getSize().y * 0.25f});
+    boat.addComponent<ControllerComponent>(std::move(boatController));
+    auto& mountComp = boat.addComponent<VehicleMountComponent>(inputService, &player);
+    mountComp.setMountRadius(PhysicsUnits::toUnits(1.2f));
+    mountComp.setSeatOffset(glm::vec2{0.0f, boatSprite->getSize().y * 0.25f});
+    mountComp.setDebugCamera(&camera);
+    auto& boatSensor = boat.addComponent<GroundSensorComponent>();
+    boatSensor.setWorldEntities(&scene.getEntities());
+    boatCollider.ensureCollider(boat);
 
     // Particle effects setup
     ParticleSystem particleSystem;
@@ -437,6 +501,7 @@ int main() {
 //            }
 //        }
         audio.update();
+        dialogue.update(effectiveDt, audio);
 
         // Toggle pause overlay on ESC press.
         const bool escDown = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
@@ -464,6 +529,23 @@ int main() {
             pauseScreen.update(deltaTime, pointer);
         }
 
+        // Switch player animation based on horizontal speed.
+        {
+            static std::string currentAnim = startAnimation ? startAnimation->getName() : "";
+            const float vx = playerRb.body() ? playerRb.body()->getVelocity().x : 0.0f;
+            const float speed = std::abs(vx);
+            const std::string desiredAnim =
+                    speed < 5.0f ? "Idle" :
+                    speed < 80.0f ? "Walk" : "Run";
+
+            if (desiredAnim != currentAnim) {
+                if (auto it = animResult.animations.find(desiredAnim); it != animResult.animations.end()) {
+                    playerAnimator->play(it->second);
+                    currentAnim = desiredAnim;
+                }
+            }
+        }
+
         scene.updateWorld(effectiveDt, camera, renderer);
 
         // Update particle emitter to follow player
@@ -478,28 +560,15 @@ int main() {
 //        particleSystem.render(particleRenderer);
 //        particleRenderer.end();
 
-        // Render pause UI overlay without clearing the scene.
+        // Render UI overlays (pause, dialogue) without clearing the scene.
+        std::vector<UI::UIRenderCommand> uiCommands;
         if (pauseOverlayActive) {
-            const glm::mat4 uiProj = glm::ortho(0.0f, static_cast<float>(fbW),
-                                                0.0f, static_cast<float>(fbH));
-            renderer.beginFrame(uiProj, {}, false);
             const auto commands = pauseScreen.collectRenderCommands();
-            for (const auto& cmd : commands) {
-                const float w = cmd.rect.z - cmd.rect.x;
-                const float h = cmd.rect.w - cmd.rect.y;
-                if (w <= 0.0f || h <= 0.0f) continue;
-                GameObjects::Sprite sprite(glm::vec2{0.0f, 0.0f}, glm::vec2{w, h},
-                                           glm::vec3{cmd.color.x, cmd.color.y, cmd.color.z});
-                if (cmd.texture) {
-                    // Non-owning alias to avoid deleting underlying manager-owned texture.
-                    std::shared_ptr<GameObjects::Texture> texAlias(cmd.texture, [](GameObjects::Texture*){});
-                    sprite.setTexture(texAlias);
-                }
-                const glm::mat4 model = glm::translate(glm::mat4(1.0f),
-                                                       glm::vec3{cmd.rect.x, cmd.rect.y, 0.0f});
-                renderer.submitSprite(sprite, model, static_cast<int>(cmd.zIndex));
-            }
-            renderer.endFrame();
+            uiCommands.insert(uiCommands.end(), commands.begin(), commands.end());
+        }
+        dialogue.appendCommands(fbW, fbH, uiCommands);
+        if (!uiCommands.empty()) {
+            UI::UIRenderer::render(uiCommands, fbW, fbH);
         }
 
 #ifdef _WIN32

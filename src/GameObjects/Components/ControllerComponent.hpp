@@ -13,16 +13,19 @@ public:
         : m_controller(std::move(controller)) {}
 
     void update(Entity& owner, double dt) override {
-        if (m_controller) {
+        if (m_controller && m_enabled) {
             m_controller->update(owner, dt);
         }
     }
 
     IController* controller() { return m_controller.get(); }
     const IController* controller() const { return m_controller.get(); }
+    void setEnabled(bool enabled) { m_enabled = enabled; }
+    bool isEnabled() const { return m_enabled; }
 
 private:
     std::unique_ptr<IController> m_controller;
+    bool m_enabled{true};
 };
 
 #endif // GL2D_CONTROLLERCOMPONENT_HPP

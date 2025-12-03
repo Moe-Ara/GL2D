@@ -8,6 +8,8 @@
 #include "Physics/PhysicsUnits.hpp"
 #include "FeelingsSystem/FeelingSnapshot.hpp"
 
+class Entity;
+
 // Base movement controller that applies platformer-like motion using an intent
 // source (input, AI, scripted, etc.). Override gatherIntent in derived classes.
 class CharacterController : public IController {
@@ -24,11 +26,15 @@ public:
     void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot);
     void resetFeelingOverrides();
     void setWorldEntities(std::vector<std::unique_ptr<Entity>>* world) { m_worldEntities = world; }
+    void resetVelocity();
+    void setVelocity(const glm::vec2& velocity);
 
 protected:
     virtual Intent gatherIntent(Entity& entity, double dt) = 0;
     virtual void onLanded(Entity& /*entity*/) {}
     virtual void onLeftGround(Entity& /*entity*/) {}
+
+    enum class MoveMode { Idle, Walk, Run };
 
     std::vector<std::unique_ptr<Entity>>* m_worldEntities{nullptr};
     glm::vec2 m_velocity{0.0f};
@@ -44,6 +50,10 @@ protected:
     float m_deceleration{PhysicsUnits::toUnits(20.0f)};
     float m_jumpImpulse{PhysicsUnits::toUnits(4.0f)};
     float m_gravity{PhysicsUnits::toUnits(9.81f)};
+    float m_walkSpeedMultiplier{0.5f}; // fraction of run speed when stick is slightly tilted
+    float m_walkAxisThreshold{0.6f};   // analog magnitude at/under this stays in walk
+    float m_runAxisThreshold{0.85f};   // analog magnitude at/over this enters run (hysteresis to prevent flicker)
+    MoveMode m_lastMoveMode{MoveMode::Idle};
 
     // Baseline values for feelings overrides.
     float m_baseMoveSpeed{PhysicsUnits::toUnits(1.5f)};

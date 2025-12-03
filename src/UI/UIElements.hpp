@@ -67,6 +67,9 @@ struct UIRenderCommand {
     glm::vec4 color{1.0f};
     GameObjects::Texture* texture{nullptr}; // optional, non-owning
     float zIndex{0.0f};
+    // Optional text rendering (uses color above). If non-empty, texture is ignored.
+    std::string text{};
+    float textScale{1.0f};
 };
 
 class UIElement {

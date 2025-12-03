@@ -1,6 +1,7 @@
 #include "GroundSensorComponent.hpp"
 
 #include "GameObjects/Components/ColliderComponent.hpp"
+#include "GameObjects/Components/RigidBodyComponent.hpp"
 #include "GameObjects/Entity.hpp"
 #include "Physics/Collision/AABB.hpp"
 #include "Physics/PhysicsCasts.hpp"
@@ -42,7 +43,30 @@ GroundSensorComponent::HitInfo GroundSensorComponent::castSensor(const glm::vec2
     result.normal = hit.normal;
     result.point = hit.point;
     result.distance = hit.distance;
+    result.entity = hit.entity;
     return result;
+}
+
+void GroundSensorComponent::resolvePlatformContact() {
+    m_platformEntity = nullptr;
+    m_platformVelocity = glm::vec2{0.0f};
+    if (m_platformLayerMask == 0u || !m_groundHit.hit || !m_groundHit.entity) {
+        return;
+    }
+    auto* platformCollider = m_groundHit.entity->getComponent<ColliderComponent>();
+    if (!platformCollider) {
+        return;
+    }
+    const uint32_t layerBit = 1u << platformCollider->getLayer();
+    if ((layerBit & m_platformLayerMask) == 0u) {
+        return;
+    }
+    m_platformEntity = m_groundHit.entity;
+    if (auto* rbComp = m_platformEntity->getComponent<RigidBodyComponent>()) {
+        if (auto* rb = rbComp->body()) {
+            m_platformVelocity = rb->getVelocity();
+        }
+    }
 }
 
 void GroundSensorComponent::updateGroundState(Entity& owner, bool groundedNow) {
@@ -68,6 +92,8 @@ void GroundSensorComponent::refresh(Entity& owner) {
     m_grounded = false;
     m_justLanded = false;
     m_justLeftGround = false;
+    m_platformEntity = nullptr;
+    m_platformVelocity = glm::vec2{0.0f};
 
     if (!m_worldEntities) {
         updateGroundState(owner, false);
@@ -109,6 +135,7 @@ void GroundSensorComponent::refresh(Entity& owner) {
                                 m_wallProbeDistance,
                                 m_wallLayerMask,
                                 owner);
+    resolvePlatformContact();
 
     m_wallContact = m_leftWallHit.hit || m_rightWallHit.hit;
     if (m_leftWallHit.hit && m_rightWallHit.hit) {

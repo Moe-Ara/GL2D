@@ -14,6 +14,8 @@ public:
             : m_inputService(inputService) {}
     ~PlayerController() override = default;
 
+    void resetInputState();
+
 private:
     Intent gatherIntent(Entity& entity, double dt) override;
     void consumeActionEvent(const ActionEvent &event);
@@ -24,6 +26,7 @@ private:
     bool m_jumpQueued{false};
     float m_axisX{0.0f};
     bool m_axisUpdated{false};
+    float m_speedLogTimer{0.0f};
 };
 
 #endif
