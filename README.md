@@ -18,7 +18,7 @@ physics, animation, lighting, audio, and tooling hooks to build 2D games efficie
 - Sprite + tilemap rendering with batching
 - Animation system with state machines and frame events
 
-## What This Demonstrates (Recruiter View)
+## What This Demonstrates 
 - Engine architecture design: systems + component model, clear data flow
 - Graphics programming: batching, render targets, lighting passes, shaders
 - Gameplay systems: camera, physics, input, animation state machines
