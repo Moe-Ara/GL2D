@@ -1,43 +1,73 @@
 <div align="center">
   <h1>GL2D</h1>
-  <p>2D game engine + demo scene (The Lost Heroin)</p>
+  <p>Modern C++ 2D engine with layered rendering, gameplay systems, and editor-ready foundations.</p>
   <p>
-    <img src="docs/TheLostHeroin.gif" alt="The Lost Heroin demo" width="900"/>
+    <img src="docs/TheLostHeroin.gif" alt="Engine demo showcase" width="900"/>
   </p>
 </div>
 
 ## Overview
-GL2D is a C++ 2D engine with a demo scene showcasing parallax backgrounds, camera follow,
-lighting, and sprite-based rendering.
+GL2D is a C++ 2D engine focused on high-performance rendering, modular gameplay systems,
+and data-driven content workflows. It provides explicit render layering, camera control,
+physics, animation, lighting, audio, and tooling hooks to build 2D games efficiently.
 
-## Features
-- Sprite rendering with explicit render layers
-- Camera system with follow modes and world bounds
-- Parallax background layers
-- Basic physics (rigid bodies, colliders)
-- Input bindings and action events
-- Animation system (spritesheets, state machines)
-- Lighting pipeline (lights, cookies, normal maps)
-- Tilemap rendering
-- Particles
-- Audio (runtime hooks)
-- Debug overlay and gizmos
-- Post-process lighting pass (off-screen render target)
-- Texture caching and sprite cloning
-- Action-driven input mapping (keyboard + gamepad)
-- Scene utilities for content-driven setup
+## Engine Highlights
+- Explicit render layers + stable sorting for deterministic draw order
+- Off-screen render target with lighting/composite pass
+- Parallax-ready camera with follow modes and world bounds
+- Sprite + tilemap rendering with batching
+- Animation system with state machines and frame events
+
+## What This Demonstrates (Recruiter View)
+- Engine architecture design: systems + component model, clear data flow
+- Graphics programming: batching, render targets, lighting passes, shaders
+- Gameplay systems: camera, physics, input, animation state machines
+- Tooling mindset: managers/loaders, data-driven setup, debug overlays
+- Performance awareness: sorting, batching, broadphase collision
+
+## Systems
+- **Rendering**: sprite batching, render layers, post-process lighting pass, normal maps, light cookies
+- **Camera**: follow modes, dead zones, world bounds, view projection helpers
+- **Physics**: rigid bodies, colliders (AABB/circle/capsule), triggers, broadphase quadtree
+- **Input**: action bindings, event bus, command registry, keyboard/gamepad mapping
+- **Animation**: animator, animation state machine, per-frame callbacks
+- **Audio**: music/SFX/dialogue, buses, spatial listener, crossfades (miniaudio)
+- **Particles**: sprite-based particle rendering pipeline
+- **AI Utilities**: navmesh debug, perception helpers, steering utilities
+- **Content**: texture/sprite managers, tilemap data, level loader
+- **Debug**: overlay, collider and sensor debug draws
+
+## Example Engine Workflow
+1) Load sprites, tilemaps, and animations through managers/loaders.
+2) Build a `Scene` with entities + components.
+3) Run `RenderSystem` to gather and sort draw calls by layer/z.
+4) Apply lighting via render targets + lighting pass.
+5) Update physics, controllers, and animations each frame.
 
 ## In Progress / Planned (Editor)
-- Level editor (scene/prefab authoring)
+- Scene/prefab authoring
 - Gizmos for translate/rotate/scale
-- Inspector for components and properties
-- Asset browser and sprite/animation preview
+- Inspector for component editing
+- Asset browser + animation preview
 - Scene serialization + live reload
 - Tilemap and navmesh tooling
 - Lighting authoring tools
 
-## Demo
-The main showcase is the demo in `Demos/The Lost Heroin`.
+## Architecture
+- **Core**: `Scene`, `Entity`, and `Component` model with update/render loops
+- **Render Pipeline**: `RenderSystem` submits sprites to `Renderer`, sorted by layer and z
+- **Lighting**: render target + lighting pass, then composite to screen
+- **Gameplay**: controllers and components update entities; physics resolves collisions
+- **Data**: managers and loaders drive content setup (sprites, tilemaps, levels)
+
+## Representative Code Areas
+- Render pipeline: `src/RenderingSystem/Renderer.*`, `src/RenderingSystem/RenderSystem.*`
+- Lighting: `src/RenderingSystem/LightingPass.*`, `src/RenderingSystem/RenderTarget.*`
+- Camera: `src/Graphics/Camera/Camera.*`
+- Physics: `src/Physics/*`
+- Animation: `src/Graphics/Animation/*`, `src/GameObjects/Components/AnimatorComponent.*`
+- Audio: `src/AudioSystem/AudioManager.*`
+- Input: `src/InputSystem/*`
 
 ## Build (Windows)
 ```bash
@@ -45,29 +75,16 @@ cmake -S . -B cmake-build-debug
 cmake --build cmake-build-debug --target TheLostHeroin -j 10
 ```
 
-## Run
+## Run (Demo)
 ```bash
 cmake-build-debug\Demos\The Lost Heroin\TheLostHeroin.exe
 ```
 
-## Controls
-- `F3` toggle debug overlay
-- `Esc` close window
-
 ## Project Layout
 - `src/` engine source
-- `Demos/The Lost Heroin/` demo project
+- `Demos/The Lost Heroin/` demo scene
 - `assets/` shared content
 - `docs/` documentation and showcase media
-
-## Engine Architecture
-- **Core**: `Scene`, `Entity`, and `Component` model with update/render loops.
-- **Rendering**: `Renderer` + `RenderSystem` collect sprites, sort by layer/z, and draw via shaders.
-- **Camera**: follow modes, world bounds, and view/projection for culling and parallax.
-- **Physics**: rigid bodies, colliders, and basic collision/trigger handling.
-- **Input**: action binding system with per-frame event polling.
-- **Content**: sprite/texture managers, animation state machines, tilemaps.
-- **Debug**: overlay, collider/gizmo debug draws, and diagnostics.
 
 ## Notes
 If you add new demo source files, reconfigure CMake so it picks up new sources.
