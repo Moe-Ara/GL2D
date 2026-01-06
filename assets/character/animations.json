@@ -16,22 +16,26 @@
         {
           "row": 0,
           "col": 0,
-          "texture": "assets/character/idle.png"
+          "texture": "assets/character/idle.png",
+          "normalTexture": "assets/character/idle_normal.png"
         },
         {
           "row": 0,
           "col": 1,
-          "texture": "assets/character/idle.png"
+          "texture": "assets/character/idle.png",
+          "normalTexture": "assets/character/idle_normal.png"
         },
         {
           "row": 0,
           "col": 2,
-          "texture": "assets/character/idle.png"
+          "texture": "assets/character/idle.png",
+          "normalTexture": "assets/character/idle_normal.png"
         },
         {
           "row": 0,
           "col": 3,
-          "texture": "assets/character/idle.png"
+          "texture": "assets/character/idle.png",
+          "normalTexture": "assets/character/idle_normal.png"
         }
       ]
     },
@@ -44,22 +48,26 @@
         {
           "row": 0,
           "col": 0,
-          "texture": "assets/character/walk.png"
+          "texture": "assets/character/walk.png",
+          "normalTexture": "assets/character/walk_normal.png"
         },
         {
           "row": 0,
           "col": 1,
-          "texture": "assets/character/walk.png"
+          "texture": "assets/character/walk.png",
+          "normalTexture": "assets/character/walk_normal.png"
         },
         {
           "row": 0,
           "col": 2,
-          "texture": "assets/character/walk.png"
+          "texture": "assets/character/walk.png",
+          "normalTexture": "assets/character/walk_normal.png"
         },
         {
           "row": 0,
           "col": 3,
-          "texture": "assets/character/walk.png"
+          "texture": "assets/character/walk.png",
+          "normalTexture": "assets/character/walk_normal.png"
         }
       ]
     },
@@ -72,22 +80,54 @@
         {
           "row": 0,
           "col": 0,
-          "texture": "assets/character/run.png"
+          "texture": "assets/character/run.png",
+          "normalTexture": "assets/character/run_normal.png"
         },
         {
           "row": 0,
           "col": 1,
-          "texture": "assets/character/run.png"
+          "texture": "assets/character/run.png",
+          "normalTexture": "assets/character/run_normal.png"
         },
         {
           "row": 0,
           "col": 2,
-          "texture": "assets/character/run.png"
+          "texture": "assets/character/run.png",
+          "normalTexture": "assets/character/run_normal.png"
         },
         {
           "row": 0,
           "col": 3,
-          "texture": "assets/character/run.png"
+          "texture": "assets/character/run.png",
+          "normalTexture": "assets/character/run_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Jump",
+      "loop": false,
+      "playback": "forward",
+      "frameDuration": 0.12,
+      "frames": [
+        {
+          "row": 0,
+          "col": 0,
+          "texture": "assets/character/jump.png",
+          "normalTexture": "assets/character/jump_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Fall",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": 0.12,
+      "frames": [
+        {
+          "row": 0,
+          "col": 0,
+          "texture": "assets/character/fall.png",
+          "normalTexture": "assets/character/fall_normal.png"
         }
       ]
     }

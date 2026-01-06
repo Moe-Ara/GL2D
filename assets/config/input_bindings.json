@@ -3,9 +3,13 @@
     { "name": "MoveLeft",  "type": "button", "description": "Character strafe left" },
     { "name": "MoveRight", "type": "button" },
     { "name": "MoveHorizontal", "type": "axis1d" },
+    { "name": "MoveUp", "type": "button", "description": "Climb up when near walls" },
+    { "name": "MoveDown", "type": "button", "description": "Climb down when near walls" },
+    { "name": "MoveVertical", "type": "axis1d", "description": "Analog climb axis" },
     { "name": "Jump",      "type": "button" },
     { "name": "Interact",  "type": "button", "description": "Interact / mount / use" },
-    { "name": "BlinkTrigger", "type": "button", "animationCondition": "triggerBlink" }
+    { "name": "BlinkTrigger", "type": "button", "animationCondition": "triggerBlink" },
+    { "name": "ToggleDebugGizmos", "type": "button", "description": "Toggle debug overlay" }
   ],
 
   "commands": [
@@ -19,8 +23,13 @@
       "bindings": [
         { "device": "keyboard", "control": "KEY_A", "action": "MoveLeft" },
         { "device": "keyboard", "control": "KEY_D", "action": "MoveRight" },
+        { "device": "keyboard", "control": "KEY_W", "action": "MoveUp" },
+        { "device": "keyboard", "control": "KEY_S", "action": "MoveDown" },
+        { "device": "keyboard", "control": "KEY_UP", "action": "MoveUp" },
+        { "device": "keyboard", "control": "KEY_DOWN", "action": "MoveDown" },
         { "device": "keyboard", "control": "KEY_SPACE", "action": "Jump" },
         { "device": "keyboard", "control": "KEY_E", "action": "Interact" },
+        { "device": "keyboard", "control": "KEY_F3", "action": "ToggleDebugGizmos" },
         { "device": "mouse",    "control": "BUTTON_LEFT", "action": "BlinkTrigger" }
       ]
     },
@@ -30,9 +39,13 @@
         { "device": "gamepad", "control": "AXIS_LEFT_X", "action": "MoveHorizontal" },
         { "device": "gamepad", "control": "BUTTON_DPAD_LEFT",  "action": "MoveLeft" },
         { "device": "gamepad", "control": "BUTTON_DPAD_RIGHT", "action": "MoveRight" },
+        { "device": "gamepad", "control": "AXIS_LEFT_Y", "action": "MoveVertical" },
+        { "device": "gamepad", "control": "BUTTON_DPAD_UP", "action": "MoveUp" },
+        { "device": "gamepad", "control": "BUTTON_DPAD_DOWN", "action": "MoveDown" },
         { "device": "gamepad", "control": "BUTTON_A",      "action": "Jump" },
         { "device": "gamepad", "control": "BUTTON_X",      "action": "Interact" },
-        { "device": "gamepad", "control": "BUTTON_X",      "action": "BlinkTrigger" }
+        { "device": "gamepad", "control": "BUTTON_X",      "action": "BlinkTrigger" },
+        { "device": "gamepad", "control": "BUTTON_BACK",   "action": "ToggleDebugGizmos" }
       ]
     }
   ]

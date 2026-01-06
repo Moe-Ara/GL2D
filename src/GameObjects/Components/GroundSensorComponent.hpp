@@ -30,6 +30,7 @@ public:
     void setWorldEntities(std::vector<std::unique_ptr<Entity>>* world) { m_worldEntities = world; }
     void setLayerMasks(uint32_t groundMask, uint32_t wallMask) { m_groundLayerMask = groundMask; m_wallLayerMask = wallMask; }
     void setProbeDistances(float groundDistance, float wallDistance) { m_groundProbeDistance = groundDistance; m_wallProbeDistance = wallDistance; }
+    void setGroundSnapDistance(float distance) { m_groundSnapDistance = distance; }
     void setMinGroundNormalDot(float dot) { m_minGroundNormalDot = dot; }
     void setOffsets(float groundOffset, float wallOffset) { m_groundOffset = groundOffset; m_wallOffset = wallOffset; }
     void setPlatformLayerMask(uint32_t mask) { m_platformLayerMask = mask; }
@@ -80,6 +81,7 @@ private:
 
     float m_groundProbeDistance{PhysicsUnits::toUnits(0.25f)};
     float m_wallProbeDistance{PhysicsUnits::toUnits(0.15f)};
+    float m_groundSnapDistance{PhysicsUnits::toUnits(0.05f)};
     float m_minGroundNormalDot{0.2f};
     float m_groundOffset{PhysicsUnits::toUnits(0.02f)};
     float m_wallOffset{PhysicsUnits::toUnits(0.02f)};

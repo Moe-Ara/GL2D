@@ -6,12 +6,12 @@
 
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 #include <optional>
 
 #include <glm/glm.hpp>
 
 #include "Utils/SimpleJson.hpp"
+#include "Exceptions/SubsystemExceptions.hpp"
 
 namespace FeelingsSystem {
 namespace {
@@ -41,12 +41,12 @@ std::optional<glm::vec<N, float, glm::defaultp>> vecOpt(const JsonValue& obj, co
 
 FeelingSnapshot parseFeeling(const JsonValue& node) {
     if (!node.isObject()) {
-        throw std::runtime_error("Feeling entry must be an object");
+        throw Engine::FeelingsException("Feeling entry must be an object");
     }
     const auto& obj = node.asObject();
     auto idIt = obj.find("id");
     if (idIt == obj.end() || !idIt->second.isString()) {
-        throw std::runtime_error("Feeling entry missing string 'id'");
+        throw Engine::FeelingsException("Feeling entry missing string 'id'");
     }
 
     FeelingSnapshot f{};
@@ -110,7 +110,7 @@ std::vector<FeelingSnapshot> parseRoot(const JsonValue& root) {
             feelings.push_back(parseFeeling(entry));
         }
     } else {
-        throw std::runtime_error("Feelings file must be an array or object with 'feelings' array");
+        throw Engine::FeelingsException("Feelings file must be an array or object with 'feelings' array");
     }
     return feelings;
 }
@@ -119,7 +119,7 @@ std::vector<FeelingSnapshot> parseRoot(const JsonValue& root) {
 std::vector<FeelingSnapshot> FeelingsLoader::loadList(const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open feelings file: " + path);
+        throw Engine::FeelingsException("Failed to open feelings file: " + path);
     }
     std::stringstream buffer;
     buffer << file.rdbuf();

@@ -10,16 +10,8 @@
 namespace Graphics {
     class WindowException : public Engine::GL2DException {
     public:
-        explicit WindowException(const std::string &msg) : message("WindowException: " + msg) {}
-
-        const char *what() const noexcept override {
-            return message.c_str();
-        }
-
-        ~WindowException() noexcept override = default;
-
-    private:
-        std::string message{};
+        explicit WindowException(const std::string &msg)
+                : Engine::GL2DException("WindowException: " + msg) {}
     };
-}//namespace Graphics
+} // namespace Graphics
 #endif //GL2D_WINDOWEXCEPTION_HPP

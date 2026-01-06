@@ -6,12 +6,20 @@
 #define GL2D_GL2DEXCEPTION_HPP
 #include <exception>
 #include <string>
+#include <utility>
+
 namespace Engine {
 
-    class GL2DException :public std::exception{
+    class GL2DException : public std::exception {
     public:
-        virtual const char* what() const noexcept = 0;
-        virtual ~GL2DException() noexcept = default;
+        explicit GL2DException(std::string message) : m_message(std::move(message)) {}
+        const char* what() const noexcept override {
+            return m_message.c_str();
+        }
+        virtual ~GL2DException() noexcept override = default;
+
+    private:
+        std::string m_message{};
     };
 
 } // Exceptions

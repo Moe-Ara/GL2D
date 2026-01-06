@@ -2,8 +2,8 @@
 // Created by Mohamad on 21/11/2025.
 //
 
-#include <stdexcept>
 #include "PrefabCatalouge.hpp"
+#include "Exceptions/SubsystemExceptions.hpp"
 
 
 void PrefabCatalouge::registerPrefab(const Prefab &prefab) {
@@ -24,7 +24,7 @@ const Prefab &PrefabCatalouge::get(const std::string &id) {
     auto& map = prefabs();
     auto it = map.find(id);
     if (it == map.end()) {
-        throw std::runtime_error("PrefabCatalouge: missing prefab with id: " + id);
+        throw Engine::PrefabException("PrefabCatalouge: missing prefab with id: " + id);
     }
     return it->second;
 }

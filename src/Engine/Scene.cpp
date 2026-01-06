@@ -6,6 +6,7 @@
 #include "GameObjects/Components/RigidBodyComponent.hpp"
 #include "RenderingSystem/RenderSystem.hpp"
 #include <algorithm>
+#include <utility>
 
 Scene::Scene() {
 
@@ -17,6 +18,11 @@ Scene::~Scene() {
 
 Entity &Scene::createEntity() {
     m_entities.push_back(std::make_unique<Entity>());
+    return *m_entities.back();
+}
+
+Entity &Scene::addEntity(std::unique_ptr<Entity> entity) {
+    m_entities.push_back(std::move(entity));
     return *m_entities.back();
 }
 

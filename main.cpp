@@ -10,12 +10,15 @@
 #include "GameObjects/Entity.hpp"
 #include "GameObjects/IComponent.hpp"
 #include "GameObjects/Sprite.hpp"
+#include "GameObjects/Prefabs/PrefabDefinitions.hpp"
+#include "GameObjects/Prefabs/RopePrefab.hpp"
 #include "Graphics/Animation/Animation.hpp"
-#include "Graphics/Animation/Animator.hpp"
 #include "Graphics/Animation/Frame.hpp"
 #include "Graphics/Animation/Loaders/AnimationMetadataLoader.hpp"
 #include "Graphics/Camera/Camera.hpp"
 #include "InputSystem/InputService.hpp"
+#include "InputSystem/InputTypes.hpp"
+#include "Debug/DebugOverlay.hpp"
 #include "Managers/TextureManager.hpp"
 #include "Physics/PhysicsUnits.hpp"
 #include "RenderingSystem/RenderSystem.hpp"
@@ -23,6 +26,7 @@
 #include "RenderingSystem/ParticleRenderer.hpp"
 #include "GameObjects/Components/ControllerComponent.hpp"
 #include "Engine/PlayerController.hpp"
+#include "Engine/RopeHangComponent.hpp"
 #include "Engine/VehicleController.hpp"
 #include "Engine/VehicleMountComponent.hpp"
 #include "Engine/SwimmingComponent.hpp"
@@ -37,11 +41,13 @@
 #include "FeelingsSystem/FeelingsSystem.hpp"
 #include "FeelingsSystem/FeelingsLoader.hpp"
 #include "Engine/DialogueSystem.hpp"
+#include "Exceptions/Gl2DException.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
+#include <exception>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -62,6 +68,29 @@ namespace {
 Camera* gActiveCamera = nullptr;
 bool gMouseWasDown = false;
 bool gEscWasDown = false;
+
+std::filesystem::path resolveMetadataDirectory(const std::string &metadataPath) {
+    std::filesystem::path dir = std::filesystem::path(metadataPath).parent_path();
+    if (dir.empty()) {
+        dir = std::filesystem::current_path();
+    }
+    if (!dir.is_absolute()) {
+        dir = std::filesystem::absolute(dir);
+    }
+    return dir;
+}
+
+std::string resolveAssetPath(const std::filesystem::path &metadataDir, const std::string &assetPath) {
+    if (assetPath.empty()) {
+        return {};
+    }
+    std::filesystem::path candidate(assetPath);
+    if (candidate.is_absolute()) {
+        return candidate.string();
+    }
+    auto resolved = (metadataDir / candidate).lexically_normal();
+    return resolved.string();
+}
 
 void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
     const int safeWidth = std::max(width, 1);
@@ -84,15 +113,17 @@ AnimationLoadResult loadAnimationsFromMetadata(const std::string &metadataPath) 
     auto metadata = Loaders::AnimationMetadataLoader::loadFromFile(metadataPath);
     result.initialState = metadata.initialState;
     std::unordered_map<std::string, std::shared_ptr<GameObjects::Texture>> textureCache;
+    const auto metadataDir = resolveMetadataDirectory(metadataPath);
     auto fetchTexture = [&](const std::string &path) -> std::shared_ptr<GameObjects::Texture> {
         if (path.empty())
             return nullptr;
-        auto it = textureCache.find(path);
+        const auto resolvedPath = resolveAssetPath(metadataDir, path);
+        auto it = textureCache.find(resolvedPath);
         if (it != textureCache.end()) {
             return it->second;
         }
-        auto texture = Managers::TextureManager::loadTexture(path);
-        textureCache[path] = texture;
+        auto texture = Managers::TextureManager::loadTexture(resolvedPath);
+        textureCache[resolvedPath] = texture;
         return texture;
     };
 
@@ -150,7 +181,10 @@ int main() {
         return -1;
     }
 
-    GLFWwindow *window = glfwCreateWindow(1280, 720, "GL2D Prototype", nullptr, nullptr);
+    GLFWwindow *window = nullptr;
+    Audio::AudioManager audio;
+    try {
+        window = glfwCreateWindow(1280, 720, "GL2D Prototype", nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window!" << std::endl;
         glfwTerminate();
@@ -175,7 +209,6 @@ int main() {
     framebuffer_size_callback(window, fbWidth, fbHeight);
     camera.setFollowMode(CameraFollowMode::HardLock);
     camera.setDamping(8.0f);
-    Audio::AudioManager audio;
     try {
         audio.init();
         // Register a couple of example triggers (ensure these files exist in assets/audio).
@@ -196,7 +229,6 @@ int main() {
 
         // Background music (streaming). Ensure this file exists.
         if (audio.playMusic("assets/audio/bgm1.mp3", false, 500)) {
-            std::cout << "[Audio] Started BGM assets/audio/bgm1.mp3" << std::endl;
             audio.queueNextMusic("assets/audio/bgm.mp3", true, 2000);
         } else {
             std::cerr << "[Audio] Could not start BGM assets/audio/bgm1.mp3" << std::endl;
@@ -210,6 +242,7 @@ int main() {
     inputService.loadBindingsFromFile("assets/config/input_bindings.json", "keyboard_mouse");
 
     Scene scene;
+    Prefabs::registerGamePrefabs();
     FeelingsSystem::FeelingsController feelingsController(scene.feelings());
     DialogueSystem dialogue;
     // Load feelings config (if present) and apply a default feeling.
@@ -282,14 +315,16 @@ int main() {
     Entity &player = scene.createEntity();
     auto &playerTransform = player.addComponent<TransformComponent>();
     playerTransform.setPosition(glm::vec2{100.0f, 150.0f});
-    auto playerSprite = std::make_shared<GameObjects::Sprite>(nullptr, playerTransform.getTransform().Position, glm::vec2{128.0f, 128.0f});
-    auto playerAnimator = std::make_shared<Graphics::Animator>(playerSprite);
+    auto playerSprite = std::make_shared<GameObjects::Sprite>(nullptr, playerTransform.getTransform().Position,
+                                                              glm::vec2{128.0f, 128.0f});
+    auto &playerSpriteComp = player.addComponent<SpriteComponent>(playerSprite, 0);
+    auto &playerAnimatorComp = player.addComponent<AnimatorComponent>();
+    AnimatorComponent* playerAnimatorCompPtr = &playerAnimatorComp;
+    playerAnimatorComp.setSprite(playerSpriteComp.sharedSprite());
     if (startAnimation) {
-        playerAnimator->play(startAnimation);
+        playerAnimatorComp.play(startAnimation);
     }
-    player.addComponent<SpriteComponent>(playerSprite.get(), 0);
-    player.addComponent<AnimatorComponent>(playerAnimator.get());
-    auto &playerCollider = player.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -12.0f);
+    auto &playerCollider = player.addComponent<ColliderComponent>(nullptr, ColliderType::CAPSULE, -12.0f);
     auto &playerSensor = player.addComponent<GroundSensorComponent>();
     playerSensor.setWorldEntities(&scene.getEntities());
     playerSensor.setPlatformLayerMask(1u << kMovingPlatformLayer);
@@ -298,7 +333,9 @@ int main() {
     playerBody->setTransform(&playerTransform.getTransform());
     auto &playerRb = player.addComponent<RigidBodyComponent>(std::move(playerBody));
     auto controller = std::make_unique<PlayerController>(inputService);
-    player.addComponent<ControllerComponent>(std::move(controller));
+    controller->setMaxMoveSpeed(PhysicsUnits::toUnits(2.0f));
+    auto& playerControllerComp = player.addComponent<ControllerComponent>(std::move(controller));
+    player.addComponent<RopeHangComponent>(inputService, playerControllerComp, &scene.getEntities());
     player.addComponent<WaterStateComponent>();
     player.addComponent<SwimmingComponent>(inputService);
     playerCollider.ensureCollider(player);
@@ -332,6 +369,43 @@ int main() {
     auto& boatSensor = boat.addComponent<GroundSensorComponent>();
     boatSensor.setWorldEntities(&scene.getEntities());
     boatCollider.ensureCollider(boat);
+
+    Entity &tree = scene.createEntity();
+    auto &treeTransform = tree.addComponent<TransformComponent>();
+    treeTransform.setPosition(glm::vec2{-80.0f, 120.0f});
+    auto treeSprite = std::make_shared<GameObjects::Sprite>(treeTransform.getTransform().Position,
+                                                             glm::vec2{40.0f, 220.0f},
+                                                             glm::vec3{0.25f, 0.45f, 0.18f});
+    tree.addComponent<SpriteComponent>(treeSprite.get(), -1);
+    auto &treeCollider = tree.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -4.0f);
+    auto treeBody = std::make_unique<RigidBody>(0.0f, RigidBodyType::STATIC);
+    treeBody->setTransform(&treeTransform.getTransform());
+    tree.addComponent<RigidBodyComponent>(std::move(treeBody));
+
+    Prefabs::RopePrefabConfig ropeConfig{};
+    ropeConfig.anchorPosition =
+            treeTransform.getTransform().Position + glm::vec2{0.0f, treeSprite->getSize().y * 0.5f};
+    ropeConfig.direction = glm::vec2{0.0f, -1.0f};
+    ropeConfig.segmentCount = 14;
+    ropeConfig.segmentLength = 18.0f;
+    ropeConfig.segmentThickness = 3.5f;
+    ropeConfig.segmentSpacing = 0.5f;
+    ropeConfig.startAnchor = &tree;
+    ropeConfig.startAnchorOffset = glm::vec2{0.0f, treeSprite->getSize().y * 0.5f};
+    ropeConfig.lowerLimit = -1.2f;
+    ropeConfig.upperLimit = 1.2f;
+    ropeConfig.limitStiffness = 13.0f;
+    ropeConfig.limitDamping = 2.5f;
+    ropeConfig.maxLimitTorque = 28.0f;
+    ropeConfig.segmentMass = 0.18f;
+    ropeConfig.segmentLinearDamping = 5.0f;
+    ropeConfig.segmentAngularDamping = 5.5f;
+    ropeConfig.useAnchorEntity = false;
+    ropeConfig.maxDrop = ropeConfig.anchorPosition.y;
+    ropeConfig.clampDrop = true;
+    ropeConfig.endAnchor = &ground;
+    ropeConfig.endAnchorOffset = glm::vec2{0.0f, 20.0f};
+    Prefabs::RopePrefab::instantiate(scene, ropeConfig);
 
     // Particle effects setup
     ParticleSystem particleSystem;
@@ -484,6 +558,11 @@ int main() {
 
         // Pull and resolve input for this frame so components can read getActionEvents().
         inputService.pollEvents();
+        for (const auto& evt : inputService.getActionEvents()) {
+            if (evt.eventType == InputEventType::ButtonPressed && evt.actionName == "ToggleDebugGizmos") {
+                DebugOverlay::toggle();
+            }
+        }
 
         // Update listener at player position.
         {
@@ -532,6 +611,7 @@ int main() {
         // Switch player animation based on horizontal speed.
         {
             static std::string currentAnim = startAnimation ? startAnimation->getName() : "";
+            constexpr float kPlayerAnimationCrossfade = 0.25f;
             const float vx = playerRb.body() ? playerRb.body()->getVelocity().x : 0.0f;
             const float speed = std::abs(vx);
             const std::string desiredAnim =
@@ -539,8 +619,9 @@ int main() {
                     speed < 80.0f ? "Walk" : "Run";
 
             if (desiredAnim != currentAnim) {
-                if (auto it = animResult.animations.find(desiredAnim); it != animResult.animations.end()) {
-                    playerAnimator->play(it->second);
+                if (auto it = animResult.animations.find(desiredAnim);
+                    it != animResult.animations.end() && playerAnimatorCompPtr) {
+                    playerAnimatorCompPtr->play(it->second, kPlayerAnimationCrossfade);
                     currentAnim = desiredAnim;
                 }
             }
@@ -600,4 +681,23 @@ int main() {
     audio.shutdown();
     glfwTerminate();
     return 0;
+    } catch (const Engine::GL2DException&) {
+        if (window) {
+            glfwDestroyWindow(window);
+        }
+        glfwTerminate();
+        return 3;
+    } catch (const std::exception& ex) {
+        if (window) {
+            glfwDestroyWindow(window);
+        }
+        glfwTerminate();
+        return 3;
+    } catch (...) {
+        if (window) {
+            glfwDestroyWindow(window);
+        }
+        glfwTerminate();
+        return 3;
+    }
 }

@@ -14,7 +14,7 @@
 
 namespace Rendering {
 namespace {
-inline Vertex makeVertex(const glm::vec2 &pos, const glm::vec3 &color,
+inline Vertex makeVertex(const glm::vec2 &pos, const glm::vec4 &color,
                          const glm::vec2 &uv) {
   Vertex v{};
   v.position = pos;
@@ -48,7 +48,7 @@ void Renderer::createBuffers() {
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                         (void *)offsetof(Vertex, position));
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+  glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                         (void *)offsetof(Vertex, color));
   glEnableVertexAttribArray(2);
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
@@ -92,7 +92,9 @@ void Renderer::beginFrame(const glm::mat4 &viewProj,
 }
 
 void Renderer::submitSprite(const GameObjects::Sprite &sprite,
-                            const glm::mat4 &model, int zOrder) {
+                            const glm::mat4 &model,
+                            int layer,
+                            int zOrder) {
   Quad quad{};
   quad.textureId = sprite.hasTexture() && sprite.getTexture()
                        ? sprite.getTexture()->getID()
@@ -100,23 +102,27 @@ void Renderer::submitSprite(const GameObjects::Sprite &sprite,
   quad.normalTextureId = sprite.hasNormalTexture() && sprite.getNormalTexture()
                          ? sprite.getNormalTexture()->getID()
                          : m_defaultNormal;
+  quad.layer = layer;
   quad.zIndex = zOrder;
 
   const auto &color = sprite.getColor();
   const auto &uv = sprite.getUVCoords();
   const auto &size = sprite.getSize();
-
   const std::array<glm::vec2, 4> localPositions = {
       glm::vec2(0.0f, size.y), glm::vec2(size.x, size.y),
       glm::vec2(size.x, 0.0f), glm::vec2(0.0f, 0.0f)};
+  const bool flipX = sprite.isFlipX();
+  const float u0 = flipX ? uv.z : uv.x;
+  const float u1 = flipX ? uv.x : uv.z;
   const std::array<glm::vec2, 4> uvCoords = {
-      glm::vec2(uv.x, uv.w), glm::vec2(uv.z, uv.w), glm::vec2(uv.z, uv.y),
-      glm::vec2(uv.x, uv.y)};
+      glm::vec2(u0, uv.w), glm::vec2(u1, uv.w), glm::vec2(u1, uv.y),
+      glm::vec2(u0, uv.y)};
 
   for (size_t i = 0; i < localPositions.size(); ++i) {
     glm::vec4 world = model * glm::vec4(localPositions[i], 0.0f, 1.0f);
-    glm::vec3 tintedColor = glm::vec3(color) * glm::vec3(m_globalTint);
-    quad.verts[i] = makeVertex(glm::vec2(world.x, world.y), tintedColor, uvCoords[i]);
+    const glm::vec4 tintedColor = color * m_globalTint;
+    quad.verts[i] = makeVertex(glm::vec2(world.x, world.y), tintedColor,
+                               uvCoords[i]);
   }
 
   m_quads.push_back(quad);
@@ -129,13 +135,16 @@ void Renderer::flush() {
 
   std::stable_sort(m_quads.begin(), m_quads.end(),
                    [](const Quad &a, const Quad &b) {
-                     if (a.zIndex == b.zIndex) {
-                       if (a.textureId == b.textureId) {
-                         return a.normalTextureId < b.normalTextureId;
+                     if (a.layer == b.layer) {
+                       if (a.zIndex == b.zIndex) {
+                         if (a.textureId == b.textureId) {
+                           return a.normalTextureId < b.normalTextureId;
+                         }
+                         return a.textureId < b.textureId;
                        }
-                       return a.textureId < b.textureId;
+                       return a.zIndex < b.zIndex;
                      }
-                     return a.zIndex < b.zIndex;
+                     return a.layer < b.layer;
                    });
 
   m_shader->enable();

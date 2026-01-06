@@ -2,14 +2,14 @@
 #define GL2D_SIMPLEJSON_HPP
 
 #include <map>
-#include <stdexcept>
 #include <string>
 #include <variant>
 #include <vector>
+#include "Exceptions/Gl2DException.hpp"
 
 namespace Utils {
 
-    class JsonParseException : public std::runtime_error {
+    class JsonParseException : public Engine::GL2DException {
     public:
         explicit JsonParseException(const std::string &message);
     };

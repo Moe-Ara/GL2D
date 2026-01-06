@@ -1,0 +1,1439 @@
+{
+  "initialState": "Idle",
+  "defaultFrameDuration": 0.1,
+  "atlas": {
+    "texture": "",
+    "rows": 1,
+    "cols": 1
+  },
+  "animations": [
+    {
+      "name": "Rest",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.25,
+            1.0
+          ],
+          "texture": "Rest.png",
+          "normalTexture": "Rest_normal.png"
+        },
+        {
+          "uv": [
+            0.25,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Rest.png",
+          "normalTexture": "Rest_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.75,
+            1.0
+          ],
+          "texture": "Rest.png",
+          "normalTexture": "Rest_normal.png"
+        },
+        {
+          "uv": [
+            0.75,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Rest.png",
+          "normalTexture": "Rest_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Walk",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.125,
+            1.0
+          ],
+          "texture": "Walk.png",
+          "normalTexture": "Walk_normal.png"
+        },
+        {
+          "uv": [
+            0.125,
+            0.0,
+            0.25,
+            1.0
+          ],
+          "texture": "Walk.png",
+          "normalTexture": "Walk_normal.png"
+        },
+        {
+          "uv": [
+            0.25,
+            0.0,
+            0.375,
+            1.0
+          ],
+          "texture": "Walk.png",
+          "normalTexture": "Walk_normal.png"
+        },
+        {
+          "uv": [
+            0.375,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Walk.png",
+          "normalTexture": "Walk_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.625,
+            1.0
+          ],
+          "texture": "Walk.png",
+          "normalTexture": "Walk_normal.png"
+        },
+        {
+          "uv": [
+            0.625,
+            0.0,
+            0.75,
+            1.0
+          ],
+          "texture": "Walk.png",
+          "normalTexture": "Walk_normal.png"
+        },
+        {
+          "uv": [
+            0.75,
+            0.0,
+            0.875,
+            1.0
+          ],
+          "texture": "Walk.png",
+          "normalTexture": "Walk_normal.png"
+        },
+        {
+          "uv": [
+            0.875,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Walk.png",
+          "normalTexture": "Walk_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Climb",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.16666666666666666,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.16666666666666666,
+            0.0,
+            0.3333333333333333,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.3333333333333333,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.6666666666666666,
+            0.0,
+            0.8333333333333334,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.8333333333333334,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Elixir",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.14285714285714285,
+            1.0
+          ],
+          "texture": "Elixir.png",
+          "normalTexture": "Elixir_normal.png"
+        },
+        {
+          "uv": [
+            0.14285714285714285,
+            0.0,
+            0.2857142857142857,
+            1.0
+          ],
+          "texture": "Elixir.png",
+          "normalTexture": "Elixir_normal.png"
+        },
+        {
+          "uv": [
+            0.2857142857142857,
+            0.0,
+            0.42857142857142855,
+            1.0
+          ],
+          "texture": "Elixir.png",
+          "normalTexture": "Elixir_normal.png"
+        },
+        {
+          "uv": [
+            0.42857142857142855,
+            0.0,
+            0.5714285714285714,
+            1.0
+          ],
+          "texture": "Elixir.png",
+          "normalTexture": "Elixir_normal.png"
+        },
+        {
+          "uv": [
+            0.5714285714285714,
+            0.0,
+            0.7142857142857143,
+            1.0
+          ],
+          "texture": "Elixir.png",
+          "normalTexture": "Elixir_normal.png"
+        },
+        {
+          "uv": [
+            0.7142857142857143,
+            0.0,
+            0.8571428571428571,
+            1.0
+          ],
+          "texture": "Elixir.png",
+          "normalTexture": "Elixir_normal.png"
+        },
+        {
+          "uv": [
+            0.8571428571428571,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Elixir.png",
+          "normalTexture": "Elixir_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Hang",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.16666666666666666,
+            1.0
+          ],
+          "texture": "Hang.png",
+          "normalTexture": "Hang_normal.png"
+        },
+        {
+          "uv": [
+            0.16666666666666666,
+            0.0,
+            0.3333333333333333,
+            1.0
+          ],
+          "texture": "Hang.png",
+          "normalTexture": "Hang_normal.png"
+        },
+        {
+          "uv": [
+            0.3333333333333333,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Hang.png",
+          "normalTexture": "Hang_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "texture": "Hang.png",
+          "normalTexture": "Hang_normal.png"
+        },
+        {
+          "uv": [
+            0.6666666666666666,
+            0.0,
+            0.8333333333333334,
+            1.0
+          ],
+          "texture": "Hang.png",
+          "normalTexture": "Hang_normal.png"
+        },
+        {
+          "uv": [
+            0.8333333333333334,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Hang.png",
+          "normalTexture": "Hang_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Pull_up",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.16666666666666666,
+            1.0
+          ],
+          "texture": "Pull_up.png",
+          "normalTexture": "Pull_up_normal.png"
+        },
+        {
+          "uv": [
+            0.16666666666666666,
+            0.0,
+            0.3333333333333333,
+            1.0
+          ],
+          "texture": "Pull_up.png",
+          "normalTexture": "Pull_up_normal.png"
+        },
+        {
+          "uv": [
+            0.3333333333333333,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Pull_up.png",
+          "normalTexture": "Pull_up_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "texture": "Pull_up.png",
+          "normalTexture": "Pull_up_normal.png"
+        },
+        {
+          "uv": [
+            0.6666666666666666,
+            0.0,
+            0.8333333333333334,
+            1.0
+          ],
+          "texture": "Pull_up.png",
+          "normalTexture": "Pull_up_normal.png"
+        },
+        {
+          "uv": [
+            0.8333333333333334,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Pull_up.png",
+          "normalTexture": "Pull_up_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Roll",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.07692307692307693,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.07692307692307693,
+            0.0,
+            0.15384615384615385,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.15384615384615385,
+            0.0,
+            0.23076923076923078,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.23076923076923078,
+            0.0,
+            0.3076923076923077,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.3076923076923077,
+            0.0,
+            0.38461538461538464,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.38461538461538464,
+            0.0,
+            0.46153846153846156,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.46153846153846156,
+            0.0,
+            0.5384615384615384,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.5384615384615384,
+            0.0,
+            0.6153846153846154,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.6153846153846154,
+            0.0,
+            0.6923076923076923,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.6923076923076923,
+            0.0,
+            0.7692307692307693,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.7692307692307693,
+            0.0,
+            0.8461538461538461,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.8461538461538461,
+            0.0,
+            0.9230769230769231,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        },
+        {
+          "uv": [
+            0.9230769230769231,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Roll.png",
+          "normalTexture": "Roll_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Special_Attack_1",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.125,
+            1.0
+          ],
+          "texture": "Special_Attack_1.png",
+          "normalTexture": "Special_Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.125,
+            0.0,
+            0.25,
+            1.0
+          ],
+          "texture": "Special_Attack_1.png",
+          "normalTexture": "Special_Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.25,
+            0.0,
+            0.375,
+            1.0
+          ],
+          "texture": "Special_Attack_1.png",
+          "normalTexture": "Special_Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.375,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Special_Attack_1.png",
+          "normalTexture": "Special_Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.625,
+            1.0
+          ],
+          "texture": "Special_Attack_1.png",
+          "normalTexture": "Special_Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.625,
+            0.0,
+            0.75,
+            1.0
+          ],
+          "texture": "Special_Attack_1.png",
+          "normalTexture": "Special_Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.75,
+            0.0,
+            0.875,
+            1.0
+          ],
+          "texture": "Special_Attack_1.png",
+          "normalTexture": "Special_Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.875,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Special_Attack_1.png",
+          "normalTexture": "Special_Attack_1_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Special_Attack_2",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.2,
+            1.0
+          ],
+          "texture": "Special_Attack_2.png",
+          "normalTexture": "Special_Attack_2_normal.png"
+        },
+        {
+          "uv": [
+            0.2,
+            0.0,
+            0.4,
+            1.0
+          ],
+          "texture": "Special_Attack_2.png",
+          "normalTexture": "Special_Attack_2_normal.png"
+        },
+        {
+          "uv": [
+            0.4,
+            0.0,
+            0.6,
+            1.0
+          ],
+          "texture": "Special_Attack_2.png",
+          "normalTexture": "Special_Attack_2_normal.png"
+        },
+        {
+          "uv": [
+            0.6,
+            0.0,
+            0.8,
+            1.0
+          ],
+          "texture": "Special_Attack_2.png",
+          "normalTexture": "Special_Attack_2_normal.png"
+        },
+        {
+          "uv": [
+            0.8,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Special_Attack_2.png",
+          "normalTexture": "Special_Attack_2_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Special_Attack_3",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.14285714285714285,
+            1.0
+          ],
+          "texture": "Special_Attack_3.png",
+          "normalTexture": "Special_Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.14285714285714285,
+            0.0,
+            0.2857142857142857,
+            1.0
+          ],
+          "texture": "Special_Attack_3.png",
+          "normalTexture": "Special_Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.2857142857142857,
+            0.0,
+            0.42857142857142855,
+            1.0
+          ],
+          "texture": "Special_Attack_3.png",
+          "normalTexture": "Special_Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.42857142857142855,
+            0.0,
+            0.5714285714285714,
+            1.0
+          ],
+          "texture": "Special_Attack_3.png",
+          "normalTexture": "Special_Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.5714285714285714,
+            0.0,
+            0.7142857142857143,
+            1.0
+          ],
+          "texture": "Special_Attack_3.png",
+          "normalTexture": "Special_Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.7142857142857143,
+            0.0,
+            0.8571428571428571,
+            1.0
+          ],
+          "texture": "Special_Attack_3.png",
+          "normalTexture": "Special_Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.8571428571428571,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Special_Attack_3.png",
+          "normalTexture": "Special_Attack_3_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Take",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.14285714285714285,
+            1.0
+          ],
+          "texture": "Take.png",
+          "normalTexture": "Take_normal.png"
+        },
+        {
+          "uv": [
+            0.14285714285714285,
+            0.0,
+            0.2857142857142857,
+            1.0
+          ],
+          "texture": "Take.png",
+          "normalTexture": "Take_normal.png"
+        },
+        {
+          "uv": [
+            0.2857142857142857,
+            0.0,
+            0.42857142857142855,
+            1.0
+          ],
+          "texture": "Take.png",
+          "normalTexture": "Take_normal.png"
+        },
+        {
+          "uv": [
+            0.42857142857142855,
+            0.0,
+            0.5714285714285714,
+            1.0
+          ],
+          "texture": "Take.png",
+          "normalTexture": "Take_normal.png"
+        },
+        {
+          "uv": [
+            0.5714285714285714,
+            0.0,
+            0.7142857142857143,
+            1.0
+          ],
+          "texture": "Take.png",
+          "normalTexture": "Take_normal.png"
+        },
+        {
+          "uv": [
+            0.7142857142857143,
+            0.0,
+            0.8571428571428571,
+            1.0
+          ],
+          "texture": "Take.png",
+          "normalTexture": "Take_normal.png"
+        },
+        {
+          "uv": [
+            0.8571428571428571,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Take.png",
+          "normalTexture": "Take_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Attack_1",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.2,
+            1.0
+          ],
+          "texture": "Attack_1.png",
+          "normalTexture": "Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.2,
+            0.0,
+            0.4,
+            1.0
+          ],
+          "texture": "Attack_1.png",
+          "normalTexture": "Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.4,
+            0.0,
+            0.6,
+            1.0
+          ],
+          "texture": "Attack_1.png",
+          "normalTexture": "Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.6,
+            0.0,
+            0.8,
+            1.0
+          ],
+          "texture": "Attack_1.png",
+          "normalTexture": "Attack_1_normal.png"
+        },
+        {
+          "uv": [
+            0.8,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Attack_1.png",
+          "normalTexture": "Attack_1_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Attack_2",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Attack_2.png",
+          "normalTexture": "Attack_2_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Attack_2.png",
+          "normalTexture": "Attack_2_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Attack_3",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.2,
+            1.0
+          ],
+          "texture": "Attack_3.png",
+          "normalTexture": "Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.2,
+            0.0,
+            0.4,
+            1.0
+          ],
+          "texture": "Attack_3.png",
+          "normalTexture": "Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.4,
+            0.0,
+            0.6,
+            1.0
+          ],
+          "texture": "Attack_3.png",
+          "normalTexture": "Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.6,
+            0.0,
+            0.8,
+            1.0
+          ],
+          "texture": "Attack_3.png",
+          "normalTexture": "Attack_3_normal.png"
+        },
+        {
+          "uv": [
+            0.8,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Attack_3.png",
+          "normalTexture": "Attack_3_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Attack_4",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.2,
+            1.0
+          ],
+          "texture": "Attack_4.png",
+          "normalTexture": "Attack_4_normal.png"
+        },
+        {
+          "uv": [
+            0.2,
+            0.0,
+            0.4,
+            1.0
+          ],
+          "texture": "Attack_4.png",
+          "normalTexture": "Attack_4_normal.png"
+        },
+        {
+          "uv": [
+            0.4,
+            0.0,
+            0.6,
+            1.0
+          ],
+          "texture": "Attack_4.png",
+          "normalTexture": "Attack_4_normal.png"
+        },
+        {
+          "uv": [
+            0.6,
+            0.0,
+            0.8,
+            1.0
+          ],
+          "texture": "Attack_4.png",
+          "normalTexture": "Attack_4_normal.png"
+        },
+        {
+          "uv": [
+            0.8,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Attack_4.png",
+          "normalTexture": "Attack_4_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Climb",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.16666666666666666,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.16666666666666666,
+            0.0,
+            0.3333333333333333,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.3333333333333333,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.6666666666666666,
+            0.0,
+            0.8333333333333334,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        },
+        {
+          "uv": [
+            0.8333333333333334,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Climb.png",
+          "normalTexture": "Climb_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Dead",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.25,
+            1.0
+          ],
+          "texture": "Dead.png",
+          "normalTexture": "Dead_normal.png"
+        },
+        {
+          "uv": [
+            0.25,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Dead.png",
+          "normalTexture": "Dead_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.75,
+            1.0
+          ],
+          "texture": "Dead.png",
+          "normalTexture": "Dead_normal.png"
+        },
+        {
+          "uv": [
+            0.75,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Dead.png",
+          "normalTexture": "Dead_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Run",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.14285714285714285,
+            1.0
+          ],
+          "texture": "Run.png",
+          "normalTexture": "Run_normal.png"
+        },
+        {
+          "uv": [
+            0.14285714285714285,
+            0.0,
+            0.2857142857142857,
+            1.0
+          ],
+          "texture": "Run.png",
+          "normalTexture": "Run_normal.png"
+        },
+        {
+          "uv": [
+            0.2857142857142857,
+            0.0,
+            0.42857142857142855,
+            1.0
+          ],
+          "texture": "Run.png",
+          "normalTexture": "Run_normal.png"
+        },
+        {
+          "uv": [
+            0.42857142857142855,
+            0.0,
+            0.5714285714285714,
+            1.0
+          ],
+          "texture": "Run.png",
+          "normalTexture": "Run_normal.png"
+        },
+        {
+          "uv": [
+            0.5714285714285714,
+            0.0,
+            0.7142857142857143,
+            1.0
+          ],
+          "texture": "Run.png",
+          "normalTexture": "Run_normal.png"
+        },
+        {
+          "uv": [
+            0.7142857142857143,
+            0.0,
+            0.8571428571428571,
+            1.0
+          ],
+          "texture": "Run.png",
+          "normalTexture": "Run_normal.png"
+        },
+        {
+          "uv": [
+            0.8571428571428571,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Run.png",
+          "normalTexture": "Run_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.16666666666666666,
+            1.0
+          ],
+          "texture": "Idle.png",
+          "normalTexture": "Idle_normal.png"
+        },
+        {
+          "uv": [
+            0.16666666666666666,
+            0.0,
+            0.3333333333333333,
+            1.0
+          ],
+          "texture": "Idle.png",
+          "normalTexture": "Idle_normal.png"
+        },
+        {
+          "uv": [
+            0.3333333333333333,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Idle.png",
+          "normalTexture": "Idle_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "texture": "Idle.png",
+          "normalTexture": "Idle_normal.png"
+        },
+        {
+          "uv": [
+            0.6666666666666666,
+            0.0,
+            0.8333333333333334,
+            1.0
+          ],
+          "texture": "Idle.png",
+          "normalTexture": "Idle_normal.png"
+        },
+        {
+          "uv": [
+            0.8333333333333334,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Idle.png",
+          "normalTexture": "Idle_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Hurt",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.3333333333333333,
+            1.0
+          ],
+          "texture": "Hurt.png",
+          "normalTexture": "Hurt_normal.png"
+        },
+        {
+          "uv": [
+            0.3333333333333333,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "texture": "Hurt.png",
+          "normalTexture": "Hurt_normal.png"
+        },
+        {
+          "uv": [
+            0.6666666666666666,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Hurt.png",
+          "normalTexture": "Hurt_normal.png"
+        }
+      ]
+    },
+    {
+      "name": "Jump",
+      "loop": true,
+      "playback": "forward",
+      "frameDuration": null,
+      "frames": [
+        {
+          "uv": [
+            0.0,
+            0.0,
+            0.16666666666666666,
+            1.0
+          ],
+          "texture": "Jump.png",
+          "normalTexture": "Jump_normal.png"
+        },
+        {
+          "uv": [
+            0.16666666666666666,
+            0.0,
+            0.3333333333333333,
+            1.0
+          ],
+          "texture": "Jump.png",
+          "normalTexture": "Jump_normal.png"
+        },
+        {
+          "uv": [
+            0.3333333333333333,
+            0.0,
+            0.5,
+            1.0
+          ],
+          "texture": "Jump.png",
+          "normalTexture": "Jump_normal.png"
+        },
+        {
+          "uv": [
+            0.5,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "texture": "Jump.png",
+          "normalTexture": "Jump_normal.png"
+        },
+        {
+          "uv": [
+            0.6666666666666666,
+            0.0,
+            0.8333333333333334,
+            1.0
+          ],
+          "texture": "Jump.png",
+          "normalTexture": "Jump_normal.png"
+        },
+        {
+          "uv": [
+            0.8333333333333334,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "Jump.png",
+          "normalTexture": "Jump_normal.png"
+        }
+      ]
+    }
+  ]
+}

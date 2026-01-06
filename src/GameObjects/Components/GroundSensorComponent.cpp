@@ -148,7 +148,8 @@ void GroundSensorComponent::refresh(Entity& owner) {
         m_wallNormal = glm::vec2{-1.0f, 0.0f};
     }
 
-    const bool groundedNow = m_groundHit.hit && m_groundHit.normal.y >= m_minGroundNormalDot;
+    const bool closeEnough = m_groundHit.hit && m_groundHit.distance <= m_groundSnapDistance;
+    const bool groundedNow = m_groundHit.hit && m_groundHit.normal.y >= m_minGroundNormalDot && closeEnough;
     m_grounded = groundedNow;
     updateGroundState(owner, groundedNow);
 }

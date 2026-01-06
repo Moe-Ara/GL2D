@@ -6,19 +6,20 @@
 namespace GameObjects {
 
 Sprite::Sprite(glm::vec2 position, glm::vec2 size, glm::vec3 color)
-    : m_position(position), m_size(size), m_color(color), m_texture(nullptr),
+    : m_position(position), m_size(size),
+      m_color(glm::vec4(color, 1.0f)), m_texture(nullptr),
       m_uvCoords(0, 0, 1, 1) {}
 
 Sprite::Sprite(std::shared_ptr<Texture> texture, glm::vec2 position,
                glm::vec2 size)
     : m_texture(std::move(texture)), m_position(position), m_size(size),
-      m_color(glm::vec3(1.0f)), m_uvCoords(0, 0, 1, 1) {}
+      m_color(glm::vec4(1.0f)), m_uvCoords(0, 0, 1, 1) {}
 
 Sprite::Sprite(std::shared_ptr<Texture> texture, glm::vec2 position,
                glm::vec2 size, int row, int column, int totalRows,
                int totalCols)
     : m_texture(std::move(texture)), m_position(position), m_size(size),
-      m_color(glm::vec3(1.0f)) {
+      m_color(glm::vec4(1.0f)) {
 
   float frameWidth = 1.0f / totalCols;
   float frameHeight = 1.0f / totalRows;
@@ -49,7 +50,9 @@ void Sprite::setNormalTexture(const std::shared_ptr<Texture> &newTexture) {
   m_normalTexture = newTexture;
 }
 
-const glm::vec3 &Sprite::getColor() const { return m_color; }
+const glm::vec4 &Sprite::getColor() const { return m_color; }
+
+void Sprite::setColor(const glm::vec4 &color) { m_color = color; }
 
 const glm::vec4 &Sprite::getUVCoords() const { return m_uvCoords; }
 
@@ -58,5 +61,23 @@ const glm::vec2 &Sprite::getSize() const { return m_size; }
 const glm::vec2 &Sprite::getPosition() const { return m_position; }
 
 bool Sprite::hasTexture() const { return m_texture != nullptr; }
+
+void Sprite::setFlipX(bool flip) {
+  m_flipX = flip;
+}
+
+bool Sprite::isFlipX() const {
+  return m_flipX;
+}
+
+std::shared_ptr<Sprite> Sprite::clone() const {
+  auto clone = std::make_shared<Sprite>(m_position, m_size, glm::vec3(m_color));
+  clone->m_color = m_color;
+  clone->m_texture = m_texture;
+  clone->m_normalTexture = m_normalTexture;
+  clone->m_uvCoords = m_uvCoords;
+  clone->m_flipX = m_flipX;
+  return clone;
+}
 
 } // namespace GameObjects

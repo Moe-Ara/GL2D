@@ -10,16 +10,8 @@
 namespace Graphics {
     class AnimationException : public Engine::GL2DException {
     public:
-        explicit AnimationException(const std::string &msg) : message("AnimationException: " + msg) {}
-
-        const char *what() const noexcept override {
-            return message.c_str();
-        }
-
-        ~AnimationException() noexcept override = default;
-
-    private:
-        std::string message{};
+        explicit AnimationException(const std::string &msg)
+                : Engine::GL2DException("AnimationException: " + msg) {}
     };
 }
 #endif //GL2D_ANIMATIONEXCEPTION_HPP

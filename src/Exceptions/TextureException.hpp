@@ -10,16 +10,8 @@
 namespace GameObjects{
     class TextureException : public Engine::GL2DException {
     public:
-        explicit TextureException(const std::string &msg) : message("TextureException: " + msg) {}
-
-        const char *what() const noexcept override {
-            return message.c_str();
-        }
-
-        ~TextureException() noexcept override = default;
-
-    private:
-        std::string message{};
+        explicit TextureException(const std::string &msg)
+                : Engine::GL2DException("TextureException: " + msg) {}
     };
 }
 #endif //GL2D_TEXTUREEXCEPTION_HPP

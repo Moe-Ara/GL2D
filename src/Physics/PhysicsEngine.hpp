@@ -41,12 +41,32 @@ private:
         ACollider* collider{nullptr};
     };
 
+    struct HingeEntry {
+        RigidBody* bodyA{nullptr};
+        RigidBody* bodyB{nullptr};
+        glm::vec2 anchorA{0.0f};
+        glm::vec2 anchorB{0.0f};
+        float referenceAngle{0.0f};
+        bool limitsEnabled{false};
+        float lowerLimit{0.0f};
+        float upperLimit{0.0f};
+        float limitStiffness{10.0f};
+        float limitDamping{1.0f};
+        float maxLimitTorque{10.0f};
+        bool motorEnabled{false};
+        float motorSpeed{0.0f};
+        float motorStiffness{5.0f};
+        float maxMotorTorque{10.0f};
+    };
+
     void gather(const std::vector<std::unique_ptr<Entity>>& entities);
     void integrateBodies(float dt);
     void resolveCollisions();
+    void resolveHinges();
 
     glm::vec2 m_gravity;
     std::vector<BodyEntry> m_entries;
+    std::vector<HingeEntry> m_hingeEntries;
 };
 
 #endif // GL2D_PHYSICSENGINE_HPP

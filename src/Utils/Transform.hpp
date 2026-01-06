@@ -34,9 +34,9 @@ struct Transform {
   const glm::mat4 &getModelMatrix() const {
     if (dirty) {
       glm::mat4 m(1.0f);
-      m = glm::translate(m, glm::vec3(Position, 0.0f));
-      m = glm::rotate(m, glm::radians(Rotation), glm::vec3(0.0f, 0.0f, 1.0f));
       m = glm::scale(m, glm::vec3(Scale, 1.0f));
+      m = glm::rotate(m, glm::radians(Rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+      m = glm::translate(m, glm::vec3(Position, 0.0f));
       modelMatrix = m;
       dirty = false;
     }
