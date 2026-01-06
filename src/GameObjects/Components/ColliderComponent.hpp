@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <glm/vec2.hpp>
 
 class Entity;
 
@@ -53,6 +54,10 @@ public:
     void setOnTriggerExit(std::function<void(Entity&, Entity&)> callback) { m_onTriggerExit = std::move(callback); }
     void invokeTriggerEnter(Entity& owner, Entity& other);
     void invokeTriggerExit(Entity& owner, Entity& other);
+    void setCapsuleSizeOverride(const glm::vec2& size);
+    void clearCapsuleSizeOverride();
+    void setCapsuleOffsetOverride(const glm::vec2& offset);
+    void clearCapsuleOffsetOverride();
     // Try to fit collider bounds to the owner's sprite (currently supports AABB colliders).
     bool fitToSprite(Entity& owner, float padding = 0.0f);
     // Ensure a collider exists; if missing, create based on requested type.
@@ -72,6 +77,10 @@ private:
     uint32_t m_layer{0};
     uint32_t m_collisionMask{0xFFFFFFFFu};
     bool m_transformBound{false};
+    glm::vec2 m_capsuleSizeOverride{0.0f, 0.0f};
+    bool m_capsuleOverrideActive{false};
+    glm::vec2 m_capsuleOffsetOverride{0.0f, 0.0f};
+    bool m_capsuleOffsetOverrideActive{false};
     std::function<void(Entity&, Entity&)> m_onTriggerEnter{};
     std::function<void(Entity&, Entity&)> m_onTriggerExit{};
 };

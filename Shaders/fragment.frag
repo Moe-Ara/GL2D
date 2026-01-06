@@ -1,6 +1,6 @@
 #version 330 core
 
-in vec3 vColor;
+in vec4 vColor;
 in vec2 vTexCoord;
 
 layout(location = 0) out vec4 OutColor;
@@ -11,8 +11,8 @@ uniform sampler2D normalTexture;
 
 void main() {
     vec4 tex = texture(spriteTexture, vTexCoord);
-    vec3 albedo = tex.rgb * vColor;
-    float alpha = tex.a;
+    vec3 albedo = tex.rgb * vColor.rgb;
+    float alpha = tex.a * vColor.a;
     OutColor = vec4(albedo, alpha);
 
     vec3 sampledNormal = texture(normalTexture, vTexCoord).xyz * 2.0 - 1.0;

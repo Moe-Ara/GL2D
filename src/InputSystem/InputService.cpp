@@ -6,8 +6,8 @@
 
 #include <cmath>
 #include <iostream>
-#include <stdexcept>
 #include <utility>
+#include "Exceptions/SubsystemExceptions.hpp"
 
 namespace {
     constexpr int kKeyboardDeviceId = -1;
@@ -27,7 +27,7 @@ InputService::~InputService() {
 
 void InputService::initialize(GLFWwindow *window) {
     if (!window) {
-        throw std::runtime_error("InputService::initialize received a null GLFWwindow");
+        throw Engine::InputException("InputService::initialize received a null GLFWwindow");
     }
     m_window = window;
     s_activeService = this;

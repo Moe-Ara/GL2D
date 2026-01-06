@@ -259,7 +259,7 @@ namespace Utils {
     }
 
     JsonParseException::JsonParseException(const std::string &message)
-            : std::runtime_error(message) {
+            : Engine::GL2DException("JsonParseException: " + message) {
     }
 
     JsonValue::JsonValue() : m_type(Type::Null), m_storage(nullptr) {}

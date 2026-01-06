@@ -7,9 +7,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <stdexcept>
 #include <iostream>
 #include <filesystem>
+#include "Exceptions/SubsystemExceptions.hpp"
 
 namespace Audio {
 
@@ -17,8 +17,7 @@ namespace Audio {
         void music_end_callback(void* pUserData, ma_sound* pSound) {
             (void)pSound;
             AudioManager* mgr = reinterpret_cast<AudioManager*>(pUserData);
-            std::cout << "[Audio] Music end callback fired\n";
-            if (mgr != nullptr) {
+        if (mgr != nullptr) {
                 // Only clear active if this is the current music slot.
                 mgr->notifyMusicStopped(pSound);
             }
@@ -39,7 +38,7 @@ namespace Audio {
         rmConfig.jobThreadCount = 1;
 
         if (ma_resource_manager_init(&rmConfig, &m_resourceManager) != MA_SUCCESS) {
-            throw std::runtime_error("Failed to init miniaudio resource manager");
+            throw Engine::AudioException("Failed to init miniaudio resource manager");
         }
 
         ma_engine_config engineConfig = ma_engine_config_init();
@@ -47,7 +46,7 @@ namespace Audio {
 
         if (ma_engine_init(&engineConfig, &m_engine) != MA_SUCCESS) {
             ma_resource_manager_uninit(&m_resourceManager);
-            throw std::runtime_error("Failed to init miniaudio engine");
+            throw Engine::AudioException("Failed to init miniaudio engine");
         }
 
         // Buses
@@ -57,7 +56,7 @@ namespace Audio {
             ma_sound_group_init(&m_engine, 0, nullptr, &m_ambGroup) != MA_SUCCESS) {
             ma_engine_uninit(&m_engine);
             ma_resource_manager_uninit(&m_resourceManager);
-            throw std::runtime_error("Failed to init miniaudio sound groups");
+            throw Engine::AudioException("Failed to init miniaudio sound groups");
         }
 
         // Apply initial bus gains.

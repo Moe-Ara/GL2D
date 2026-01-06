@@ -31,6 +31,12 @@ void PlayerController::consumeActionEvent(const ActionEvent &event) {
         m_moveLeft = event.value.x <= -kGamepadDeadzone;
         m_moveRight = event.value.x >= kGamepadDeadzone;
         m_axisUpdated = true;
+    } else if (event.actionName == "MoveVertical" && axisChanged) {
+        const float axisY = -event.value.y;
+        m_climbAxis = axisY;
+        m_moveUp = axisY >= kGamepadDeadzone;
+        m_moveDown = axisY <= -kGamepadDeadzone;
+        m_climbAxisUpdated = true;
     } else if (event.actionName == "MoveRight") {
         if (pressed) {
             m_moveRight = true;
@@ -40,6 +46,24 @@ void PlayerController::consumeActionEvent(const ActionEvent &event) {
         if (event.sourceEvent.deviceType != InputDeviceType::Gamepad) {
             m_axisX = 0.0f;
         }
+    } else if (event.actionName == "MoveUp") {
+        if (pressed) {
+            m_moveUp = true;
+        } else if (released) {
+            m_moveUp = false;
+        }
+        if (event.sourceEvent.deviceType != InputDeviceType::Gamepad) {
+            m_climbAxis = 0.0f;
+        }
+    } else if (event.actionName == "MoveDown") {
+        if (pressed) {
+            m_moveDown = true;
+        } else if (released) {
+            m_moveDown = false;
+        }
+        if (event.sourceEvent.deviceType != InputDeviceType::Gamepad) {
+            m_climbAxis = 0.0f;
+        }
     } else if (event.actionName == "Jump" && pressed) {
         m_jumpQueued = true;
     }
@@ -48,6 +72,7 @@ void PlayerController::consumeActionEvent(const ActionEvent &event) {
 CharacterController::Intent PlayerController::gatherIntent(Entity &entity, double dt) {
     const auto &actionEvents = m_inputService.getActionEvents();
     m_axisUpdated = false;
+    m_climbAxisUpdated = false;
     for (const auto &event: actionEvents) {
         consumeActionEvent(event);
     }
@@ -61,31 +86,19 @@ CharacterController::Intent PlayerController::gatherIntent(Entity &entity, doubl
     }
     intent.jumpPressed = m_jumpQueued;
 
+    const float climbAxisRaw = (std::abs(m_climbAxis) >= kGamepadDeadzone) ? m_climbAxis : 0.0f;
+    float climbAxis = climbAxisRaw;
+    if (!m_climbAxisUpdated && climbAxis == 0.0f) {
+        climbAxis = (m_moveUp ? 1.0f : 0.0f) - (m_moveDown ? 1.0f : 0.0f);
+    }
+    intent.climbAxis = climbAxis;
+
     // Jump queue is single-use; consume it here.
     m_jumpQueued = false;
 
     // Simple hysteresis to zero small drift.
     if (std::abs(intent.moveAxis) < kAxisEpsilon) {
         intent.moveAxis = 0.0f;
-    }
-
-    // Periodically log movement inputs and body speed to tune walk/run thresholds.
-    m_speedLogTimer += static_cast<float>(dt);
-    if (m_speedLogTimer >= 0.25f) {
-        float speed = 0.0f;
-        float vx = 0.0f;
-        float vy = 0.0f;
-        if (auto *rb = entity.getComponent<RigidBodyComponent>()) {
-            if (auto *body = rb->body()) {
-                const auto vel = body->getVelocity();
-                vx = vel.x;
-                vy = vel.y;
-                speed = glm::length(vel);
-            }
-        }
-        std::cout << "[Movement] speed=" << speed << " vx=" << vx << " vy=" << vy
-                  << " axis=" << intent.moveAxis << " rawX=" << m_axisX << std::endl;
-        m_speedLogTimer = 0.0f;
     }
 
     return intent;
@@ -97,4 +110,8 @@ void PlayerController::resetInputState() {
     m_jumpQueued = false;
     m_axisX = 0.0f;
     m_axisUpdated = false;
+    m_moveUp = false;
+    m_moveDown = false;
+    m_climbAxis = 0.0f;
+    m_climbAxisUpdated = false;
 }

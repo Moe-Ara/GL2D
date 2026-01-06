@@ -15,6 +15,7 @@
 #include "Graphics/Shader.hpp"
 #include "GameObjects/Sprite.hpp"
 #include "FeelingsSystem/FeelingSnapshot.hpp"
+#include "RenderingSystem/RenderLayers.hpp"
 
 namespace Rendering {
 
@@ -33,6 +34,7 @@ public:
                   const glm::vec4 &clearColor = {0.f, 0.f, 0.f, 1.f},
                   bool clearBuffer = true);
   void submitSprite(const GameObjects::Sprite &sprite, const glm::mat4 &model,
+                    int layer = static_cast<int>(RenderLayer::Gameplay),
                     int zOrder = 0);
   void endFrame();
   void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot);
@@ -41,6 +43,7 @@ private:
   struct Quad {
     GLuint textureId{0};
     GLuint normalTextureId{0};
+    int layer{static_cast<int>(RenderLayer::Gameplay)};
     int zIndex{0};
     Vertex verts[4];
   };

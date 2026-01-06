@@ -28,6 +28,7 @@ public:
 
     Scene &operator=(Scene &&other) = delete;
     Entity& createEntity();
+    Entity& addEntity(std::unique_ptr<Entity> entity);
     void destroyEntity(Entity& entity);
     void clear();
     void update(float deltaTime);

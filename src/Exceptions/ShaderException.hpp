@@ -10,16 +10,8 @@
 namespace Graphics{
     class ShaderException : public Engine::GL2DException {
     public:
-        explicit ShaderException(const std::string &msg) : message("ShaderException: " + msg) {}
-
-        const char *what() const noexcept override {
-            return message.c_str();
-        }
-
-        ~ShaderException() noexcept override = default;
-
-    private:
-        std::string message{};
+        explicit ShaderException(const std::string &msg)
+                : Engine::GL2DException("ShaderException: " + msg) {}
     };
 }
 #endif //GL2D_SHADEREXCEPTION_HPP

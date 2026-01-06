@@ -26,7 +26,10 @@ private:
     bool m_jumpQueued{false};
     float m_axisX{0.0f};
     bool m_axisUpdated{false};
-    float m_speedLogTimer{0.0f};
+    bool m_moveUp{false};
+    bool m_moveDown{false};
+    float m_climbAxis{0.0f};
+    bool m_climbAxisUpdated{false};
 };
 
 #endif

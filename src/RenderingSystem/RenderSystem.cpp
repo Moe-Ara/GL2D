@@ -128,6 +128,7 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
 
         if (auto *sprite = spriteComp->sprite()) {
             renderer.submitSprite(*sprite, transformComp->modelMatrix(),
+                                  spriteComp->layer(),
                                   spriteComp->zIndex());
         }
     }
@@ -214,6 +215,12 @@ void RenderSystem::renderScene(Scene &scene, Camera &camera,
     // Composite the off-screen color with the lighting pass.
     glViewport(0, 0, fbWidth, fbHeight);
     Rendering::LightingPass::draw(rt, lights, camera.getViewBounds(/*paddingFactor=*/0.0f), cookieTextures, ambientColor);
+
+    if (DebugOverlay::enabled()) {
+        renderer.beginFrame(camera.getViewProjection(), {0.0f, 0.0f, 0.0f, 0.0f}, false);
+        DebugOverlay::render(scene, camera, renderer);
+        renderer.endFrame();
+    }
 
     // Debug: draw collider wireframes and sensors on top of lighting when overlay is enabled.
     if (DebugOverlay::enabled()) {

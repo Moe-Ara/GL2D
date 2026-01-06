@@ -5,9 +5,9 @@
 #include "ParticleEffectLoader.hpp"
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 #include <glm/glm.hpp>
 #include "Utils/SimpleJson.hpp"
+#include "Exceptions/SubsystemExceptions.hpp"
 
 namespace {
 float numberOrDefault(const Utils::JsonValue& obj, const std::string& key, float fallback) {
@@ -41,14 +41,14 @@ glm::vec4 vec4OrDefault(const Utils::JsonValue& obj, const std::string& key, con
 
 ParticleEffectDefinition parseEffect(const Utils::JsonValue& node) {
     if (!node.isObject()) {
-        throw std::runtime_error("Particle effect must be an object");
+        throw Engine::ParticleException("Particle effect must be an object");
     }
     const auto& obj = node.asObject();
     ParticleEffectDefinition def{};
 
     auto nameIt = obj.find("name");
     if (nameIt == obj.end() || !nameIt->second.isString()) {
-        throw std::runtime_error("Particle effect missing string 'name'");
+        throw Engine::ParticleException("Particle effect missing string 'name'");
     }
     def.name = nameIt->second.asString();
 
@@ -78,7 +78,7 @@ ParticleEffectDefinition parseEffect(const Utils::JsonValue& node) {
 std::vector<ParticleEffectDefinition> ParticleEffectLoader::loadFromFile(const std::string &path) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open particle effects file: " + path);
+        throw Engine::ParticleException("Failed to open particle effects file: " + path);
     }
     std::stringstream buffer;
     buffer << file.rdbuf();
@@ -94,7 +94,7 @@ std::vector<ParticleEffectDefinition> ParticleEffectLoader::loadFromFile(const s
             effects.push_back(parseEffect(entry));
         }
     } else {
-        throw std::runtime_error("Particle effects file must be an array or object with 'effects' array");
+        throw Engine::ParticleException("Particle effects file must be an array or object with 'effects' array");
     }
     return effects;
 }

@@ -14,6 +14,9 @@
 #include "GameObjects/Entity.hpp"
 #include "Physics/Collision/CapsuleCollider.hpp"
 
+#include <glm/gtc/constants.hpp>
+#include <glm/vec2.hpp>
+
 ColliderComponent::ColliderComponent(std::unique_ptr<ACollider> collider,
                                      ColliderType requestedType,
                                      float padding)
@@ -96,6 +99,18 @@ bool ColliderComponent::fitToSprite(Entity &owner, float padding) {
         circleCollider->setRadius(std::max(radius, 1.0f));
         // Place the circle at the sprite's center in local space.
         circleCollider->setLocalOffset(size * 0.5f);
+        return true;
+    }
+
+    if (auto *capsule = dynamic_cast<CapsuleCollider *>(m_collider.get())) {
+        const glm::vec2 usedSize = m_capsuleOverrideActive ? m_capsuleSizeOverride : size;
+        const glm::vec2 halfHeight = glm::vec2{0.0f, usedSize.y * 0.5f};
+        const glm::vec2 center = size * 0.5f;
+        const glm::vec2 offset = m_capsuleOffsetOverrideActive ? m_capsuleOffsetOverride : glm::vec2{0.0f};
+        capsule->setRadius(std::max(0.5f * usedSize.x, 1.0f));
+        capsule->setLocalA(-halfHeight);
+        capsule->setLocalB(halfHeight);
+        capsule->setLocalOffset(center + offset);
         return true;
     }
 
@@ -190,27 +205,51 @@ void ColliderComponent::debugDraw(const glm::mat4 &viewProj, const glm::vec3 &co
             glVertex2f(a.x, a.y);
             glVertex2f(b.x, b.y);
             glEnd();
-            // draw caps
-            const int segments = 24;
-            const glm::vec2 dirNorm = glm::normalize(b - a + glm::vec2(0.0001f));
-            const glm::vec2 normal{-dirNorm.y, dirNorm.x};
-            glBegin(GL_LINE_STRIP);
-            for (int i = 0; i <= segments; ++i) {
-                const float theta = (static_cast<float>(i) / segments) * 3.1415926f;
-                const glm::vec2 p = a + normal * std::cos(theta) * radius + dirNorm * std::sin(theta) * radius;
-                glVertex2f(p.x, p.y);
-            }
-            glEnd();
-            glBegin(GL_LINE_STRIP);
-            for (int i = 0; i <= segments; ++i) {
-                const float theta = (static_cast<float>(i) / segments) * 3.1415926f;
-                const glm::vec2 p = b - normal * std::cos(theta) * radius + dirNorm * std::sin(theta) * radius;
-                glVertex2f(p.x, p.y);
-            }
+            const glm::vec2 dir = glm::normalize(b - a);
+            const glm::vec2 perp = glm::vec2{-dir.y, dir.x};
+            const auto drawCap = [&](const glm::vec2 &center, float verticalSign) {
+                const int segments = 24;
+                glBegin(GL_LINE_STRIP);
+                for (int i = 0; i <= segments; ++i) {
+                    const float theta = (static_cast<float>(i) / segments) * glm::pi<float>();
+                    const glm::vec2 circle =
+                            std::cos(theta) * perp + verticalSign * std::sin(theta) * dir;
+                    glVertex2f(center.x + circle.x * radius, center.y + circle.y * radius);
+                }
+                glEnd();
+            };
+            drawCap(b, +1.0f);
+            drawCap(a, -1.0f);
+            glBegin(GL_LINES);
+            const glm::vec2 topRight = b + perp * radius;
+            const glm::vec2 topLeft = b - perp * radius;
+            const glm::vec2 bottomRight = a + perp * radius;
+            const glm::vec2 bottomLeft = a - perp * radius;
+            glVertex2f(topLeft.x, topLeft.y);
+            glVertex2f(bottomLeft.x, bottomLeft.y);
+            glVertex2f(topRight.x, topRight.y);
+            glVertex2f(bottomRight.x, bottomRight.y);
             glEnd();
             break;
         }
         default:
             break;
     }
+}
+void ColliderComponent::setCapsuleSizeOverride(const glm::vec2 &size) {
+    m_capsuleSizeOverride = size;
+    m_capsuleOverrideActive = size.x > 0.0f && size.y > 0.0f;
+}
+
+void ColliderComponent::clearCapsuleSizeOverride() {
+    m_capsuleOverrideActive = false;
+}
+
+void ColliderComponent::setCapsuleOffsetOverride(const glm::vec2 &offset) {
+    m_capsuleOffsetOverride = offset;
+    m_capsuleOffsetOverrideActive = true;
+}
+
+void ColliderComponent::clearCapsuleOffsetOverride() {
+    m_capsuleOffsetOverrideActive = false;
 }

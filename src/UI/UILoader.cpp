@@ -6,12 +6,12 @@
 
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 #include <utility>
 
 #include <glm/common.hpp>
 
 #include "Utils/SimpleJson.hpp"
+#include "Exceptions/SubsystemExceptions.hpp"
 
 namespace {
 using Utils::JsonValue;
@@ -109,16 +109,16 @@ std::vector<std::shared_ptr<UI::UIElement>> parseChildren(const JsonValue& node,
 std::shared_ptr<UI::UIElement> buildElement(const JsonValue& node,
                                             const UI::UILoader::TextureResolver& resolver) {
     if (!node.isObject()) {
-        throw std::runtime_error("UI element node must be an object");
+        throw Engine::UIException("UI element node must be an object");
     }
     const auto& obj = node.asObject();
     auto idIt = obj.find("id");
     auto typeIt = obj.find("type");
     if (idIt == obj.end() || !idIt->second.isString()) {
-        throw std::runtime_error("UI element missing string 'id'");
+        throw Engine::UIException("UI element missing string 'id'");
     }
     if (typeIt == obj.end() || !typeIt->second.isString()) {
-        throw std::runtime_error("UI element missing string 'type'");
+        throw Engine::UIException("UI element missing string 'type'");
     }
 
     const std::string id = idIt->second.asString();
@@ -163,7 +163,7 @@ std::shared_ptr<UI::UIElement> buildElement(const JsonValue& node,
                                                  numberOrDefault(node, "spacing", 6.0f));
         element = menu;
     } else {
-        throw std::runtime_error("Unsupported UI element type: " + type);
+        throw Engine::UIException("Unsupported UI element type: " + type);
     }
 
     element->setZIndex(zIndex);
@@ -193,14 +193,14 @@ namespace UI {
 UIScreen UILoader::loadFromFile(const std::string& path, TextureResolver resolver) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open UI file: " + path);
+        throw Engine::UIException("Failed to open UI file: " + path);
     }
     std::stringstream buffer;
     buffer << file.rdbuf();
     const auto root = Utils::JsonValue::parse(buffer.str());
 
     if (!root.isObject()) {
-        throw std::runtime_error("UI root must be a JSON object");
+        throw Engine::UIException("UI root must be a JSON object");
     }
     UIScreen screen{};
     screen.canvasSize = vec2OrDefault(root, "canvas", screen.canvasSize);
@@ -211,7 +211,7 @@ UIScreen UILoader::loadFromFile(const std::string& path, TextureResolver resolve
             screen.roots.push_back(buildElement(node, resolver));
         }
     } else {
-        throw std::runtime_error("UI file missing 'elements' array");
+        throw Engine::UIException("UI file missing 'elements' array");
     }
 
     return screen;

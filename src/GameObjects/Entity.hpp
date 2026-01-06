@@ -13,7 +13,7 @@ class Entity {
 public:
     Entity();
 
-    ~Entity() = default;
+    virtual ~Entity() = default;
 
     Entity(const Entity &) = delete;
 
@@ -35,7 +35,7 @@ public:
     [[nodiscard]] const std::vector<std::unique_ptr<IComponent>> &components() const;
 
 
-    void update(double dt);
+    virtual void update(double dt);
 
     uint64_t getId() const { return m_id; }
 

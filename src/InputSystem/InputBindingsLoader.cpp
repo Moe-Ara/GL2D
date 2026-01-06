@@ -4,7 +4,6 @@
 #include <cctype>
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 
 #include <GLFW/glfw3.h>
 
@@ -68,6 +67,18 @@ namespace InputSystem {
             table["KEY_RIGHT"] = GLFW_KEY_RIGHT;
             table["KEY_UP"] = GLFW_KEY_UP;
             table["KEY_DOWN"] = GLFW_KEY_DOWN;
+            table["KEY_F1"] = GLFW_KEY_F1;
+            table["KEY_F2"] = GLFW_KEY_F2;
+            table["KEY_F3"] = GLFW_KEY_F3;
+            table["KEY_F4"] = GLFW_KEY_F4;
+            table["KEY_F5"] = GLFW_KEY_F5;
+            table["KEY_F6"] = GLFW_KEY_F6;
+            table["KEY_F7"] = GLFW_KEY_F7;
+            table["KEY_F8"] = GLFW_KEY_F8;
+            table["KEY_F9"] = GLFW_KEY_F9;
+            table["KEY_F10"] = GLFW_KEY_F10;
+            table["KEY_F11"] = GLFW_KEY_F11;
+            table["KEY_F12"] = GLFW_KEY_F12;
             return table;
         }
 

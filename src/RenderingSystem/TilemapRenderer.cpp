@@ -54,7 +54,7 @@ namespace {
             glEnableVertexAttribArray(0);
             glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
             glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+            glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
             glEnableVertexAttribArray(2);
             glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
             glBindVertexArray(0);
@@ -102,10 +102,11 @@ namespace {
                 const glm::vec2 base = origin + glm::vec2{x * tileSize.x, y * tileSize.y};
                 const uint32_t baseIndex = static_cast<uint32_t>(verts.size());
 
-                verts.push_back(Vertex{glm::vec2(base.x, base.y + tileSize.y), glm::vec3(1.0f), glm::vec2(uv.x, uv.w)});
-                verts.push_back(Vertex{glm::vec2(base.x + tileSize.x, base.y + tileSize.y), glm::vec3(1.0f), glm::vec2(uv.z, uv.w)});
-                verts.push_back(Vertex{glm::vec2(base.x + tileSize.x, base.y), glm::vec3(1.0f), glm::vec2(uv.z, uv.y)});
-                verts.push_back(Vertex{glm::vec2(base.x, base.y), glm::vec3(1.0f), glm::vec2(uv.x, uv.y)});
+                const glm::vec4 white{1.0f};
+                verts.push_back(Vertex{glm::vec2(base.x, base.y + tileSize.y), white, glm::vec2(uv.x, uv.w)});
+                verts.push_back(Vertex{glm::vec2(base.x + tileSize.x, base.y + tileSize.y), white, glm::vec2(uv.z, uv.w)});
+                verts.push_back(Vertex{glm::vec2(base.x + tileSize.x, base.y), white, glm::vec2(uv.z, uv.y)});
+                verts.push_back(Vertex{glm::vec2(base.x, base.y), white, glm::vec2(uv.x, uv.y)});
 
                 indices.insert(indices.end(), {
                     baseIndex, baseIndex + 1, baseIndex + 2,

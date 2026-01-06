@@ -35,9 +35,12 @@ public:
   void setUVCoords(const glm::vec4 &newUV);
   void setTexture(const std::shared_ptr<Texture> &newTexture);
   void setNormalTexture(const std::shared_ptr<Texture> &newTexture);
+  void setFlipX(bool flip);
+  std::shared_ptr<Sprite> clone() const;
 
   // Getters
-  const glm::vec3 &getColor() const;
+  const glm::vec4 &getColor() const;
+  void setColor(const glm::vec4 &color);
   const glm::vec4 &getUVCoords() const;
   const glm::vec2 &getSize() const;
   const glm::vec2 &getPosition() const;
@@ -46,6 +49,7 @@ public:
 
   bool hasTexture() const;
   bool hasNormalTexture() const { return m_normalTexture != nullptr; }
+  bool isFlipX() const;
 
 private:
   std::shared_ptr<Texture> m_texture;
@@ -53,7 +57,8 @@ private:
   glm::vec2 m_position{};
   glm::vec2 m_size{};
   glm::vec4 m_uvCoords{};
-  glm::vec3 m_color{};
+  glm::vec4 m_color{};
+  bool m_flipX{false};
 };
 
 } // namespace GameObjects

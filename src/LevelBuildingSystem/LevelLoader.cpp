@@ -14,12 +14,12 @@
 #include "Managers/TilemapManager.hpp"
 #include "Managers/TilesetManager.hpp"
 #include "Utils/SimpleJson.hpp"
+#include "Exceptions/SubsystemExceptions.hpp"
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 
 Level LevelLoader::loadFromData(const LevelData &data) {
     Level level{};
@@ -125,7 +125,7 @@ Level LevelLoader::loadFromData(const LevelData &data) {
 Level LevelLoader::loadFromFile(const std::string &path) {
     std::ifstream in(path);
     if (!in) {
-        throw std::runtime_error("LevelLoader: cannot open file: " + path);
+        throw Engine::LevelException("LevelLoader: cannot open file: " + path);
     }
     std::stringstream buffer;
     buffer << in.rdbuf();
