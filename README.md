@@ -1,14 +1,14 @@
 <div align="center">
   <h1>GL2D</h1>
-  <p>2D game engine + demo scene (The Lost Heroin)</p>
+  <p>Modern C++ 2D engine focused on rendering, tools, and gameplay systems.</p>
   <p>
-    <img src="docs/TheLostHeroin.gif" alt="The Lost Heroin demo" width="900"/>
+    <img src="docs/TheLostHeroin.gif" alt="Engine demo showcase" width="900"/>
   </p>
 </div>
 
 ## Overview
-GL2D is a C++ 2D engine with a demo scene showcasing parallax backgrounds, camera follow,
-lighting, and sprite-based rendering.
+GL2D is a C++ 2D engine with a focus on layered rendering, camera systems, physics,
+and tooling to build 2D games efficiently.
 
 ## Features
 - Sprite rendering with explicit render layers
@@ -36,8 +36,8 @@ lighting, and sprite-based rendering.
 - Tilemap and navmesh tooling
 - Lighting authoring tools
 
-## Demo
-The main showcase is the demo in `Demos/The Lost Heroin`.
+## Showcase
+The demo scene in `Demos/The Lost Heroin` highlights the engine systems in action.
 
 ## Build (Windows)
 ```bash
@@ -45,18 +45,18 @@ cmake -S . -B cmake-build-debug
 cmake --build cmake-build-debug --target TheLostHeroin -j 10
 ```
 
-## Run
+## Run (Demo)
 ```bash
 cmake-build-debug\Demos\The Lost Heroin\TheLostHeroin.exe
 ```
 
-## Controls
+## Controls (Demo)
 - `F3` toggle debug overlay
 - `Esc` close window
 
 ## Project Layout
 - `src/` engine source
-- `Demos/The Lost Heroin/` demo project
+- `Demos/The Lost Heroin/` demo scene
 - `assets/` shared content
 - `docs/` documentation and showcase media
 
