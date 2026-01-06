@@ -1,0 +1,113 @@
+{
+  "normalSuffix": "_normal",
+  "characters": [
+    {
+      "name": "Enchantress",
+      "directory": "Demos/The Lost Heroin/assets/women/Enchantress",
+      "output": "Demos/The Lost Heroin/assets/women/Enchantress/animations.json",
+      "initialState": "Rest",
+      "defaultFrameDuration": 0.08,
+      "normalDirectory": "normals",
+      "atlas": {
+        "texture": "",
+        "rows": 1,
+        "cols": 1
+      },
+      "animations": [
+        {"name": "Rest", "texture": "Rest.png", "rows": 1, "cols": 3},
+        {"name": "Walk", "texture": "Walk.png", "rows": 1, "cols": 8},
+        {"name": "Charge", "texture": "Charge.png", "rows": 1, "cols": 12},
+        {"name": "Climb", "texture": "Climb.png", "rows": 1, "cols": 6},
+        {"name": "Elixir", "texture": "Elixir.png", "rows": 1, "cols": 8},
+        {"name": "Hang", "texture": "Hang.png", "rows": 1, "cols": 5},
+        {"name": "Pull_up", "texture": "Pull_up.png", "rows": 1, "cols": 5},
+        {"name": "Roll", "texture": "Roll.png", "rows": 1, "cols": 7},
+        {"name": "Special_Attack_1", "texture": "Special_Attack_1.png", "rows": 1, "cols": 4},
+        {"name": "Special_Attack_2", "texture": "Special_Attack_2.png", "rows": 1, "cols": 16},
+        {"name": "Special_Attack_3", "texture": "Special_Attack_3.png", "rows": 1, "cols": 8},
+        {"name": "Take", "texture": "Take.png", "rows": 1, "cols": 5},
+        {"name": "Attack_1", "texture": "Attack_1.png", "rows": 1, "cols": 6},
+        {"name": "Attack_2", "texture": "Attack_2.png", "rows": 1, "cols": 3},
+        {"name": "Attack_3", "texture": "Attack_3.png", "rows": 1, "cols": 3},
+        {"name": "Attack_4", "texture": "Attack_4.png", "rows": 1, "cols": 10},
+        {"name": "Climb", "texture": "Climb.png", "rows": 1, "cols": 6},
+        {"name": "Dead", "texture": "Dead.png", "rows": 1, "cols": 5},
+        {"name": "Run", "texture": "Run.png", "rows": 1, "cols": 8},
+        {"name": "Idle", "texture": "Idle.png", "rows": 1, "cols": 5},
+        {"name": "Hurt", "texture": "Hurt.png", "rows": 1, "cols": 2},
+        {"name": "Jump", "texture": "Jump.png", "rows": 1, "cols": 8}
+      ]
+    },
+    {
+      "name": "Knight",
+      "directory": "Demos/The Lost Heroin/assets/women/Knight",
+      "output": "Demos/The Lost Heroin/assets/women/Knight/animations.json",
+      "initialState": "Idle",
+      "defaultFrameDuration": 0.1,
+      "atlas": {
+        "texture": "",
+        "rows": 1,
+        "cols": 1
+      },
+      "animations": [
+        {"name": "Rest", "texture": "Rest.png", "rows": 1, "cols": 4},
+        {"name": "Walk", "texture": "Walk.png", "rows": 1, "cols": 8},
+        {"name": "Climb", "texture": "Climb.png", "rows": 1, "cols": 6},
+        {"name": "Elixir", "texture": "Elixir.png", "rows": 1, "cols": 7},
+        {"name": "Hang", "texture": "Hang.png", "rows": 1, "cols": 6},
+        {"name": "Pull_up", "texture": "Pull_up.png", "rows": 1, "cols": 6},
+        {"name": "Roll", "texture": "Roll.png", "rows": 1, "cols": 13},
+        {"name": "Special_Attack_1", "texture": "Special_Attack_1.png", "rows": 1, "cols": 8},
+        {"name": "Special_Attack_2", "texture": "Special_Attack_2.png", "rows": 1, "cols": 5},
+        {"name": "Special_Attack_3", "texture": "Special_Attack_3.png", "rows": 1, "cols": 7},
+        {"name": "Take", "texture": "Take.png", "rows": 1, "cols": 7},
+        {"name": "Attack_1", "texture": "Attack_1.png", "rows": 1, "cols": 5},
+        {"name": "Attack_2", "texture": "Attack_2.png", "rows": 1, "cols": 2},
+        {"name": "Attack_3", "texture": "Attack_3.png", "rows": 1, "cols": 5},
+        {"name": "Attack_4", "texture": "Attack_4.png", "rows": 1, "cols": 5},
+        {"name": "Climb", "texture": "Climb.png", "rows": 1, "cols": 6},
+        {"name": "Dead", "texture": "Dead.png", "rows": 1, "cols": 4},
+        {"name": "Run", "texture": "Run.png", "rows": 1, "cols": 7},
+        {"name": "Idle", "texture": "Idle.png", "rows": 1, "cols": 6},
+        {"name": "Hurt", "texture": "Hurt.png", "rows": 1, "cols": 3},
+        {"name": "Jump", "texture": "Jump.png", "rows": 1, "cols": 6}
+      ]
+    },
+    {
+      "name": "Musketeer",
+      "directory": "Demos/The Lost Heroin/assets/women/Musketeer",
+      "output": "Demos/The Lost Heroin/assets/women/Musketeer/animations.json",
+      "initialState": "Idle",
+      "defaultFrameDuration": 0.1,
+      "atlas": {
+        "texture": "",
+        "rows": 1,
+        "cols": 1
+      },
+      "animations": [
+        {"name": "Rest", "texture": "Rest.png", "rows": 1, "cols": 3},
+        {"name": "Walk", "texture": "Walk.png", "rows": 1, "cols": 8},
+        {"name": "Climb", "texture": "Climb.png", "rows": 1, "cols": 6},
+        {"name": "Elixir", "texture": "Elixir.png", "rows": 1, "cols": 5},
+        {"name": "Hang", "texture": "Hang.png", "rows": 1, "cols": 6},
+        {"name": "Pull_up", "texture": "Pull_up.png", "rows": 1, "cols": 6},
+        {"name": "Roll", "texture": "Roll.png", "rows": 1, "cols": 11},
+        {"name": "Special_Attack_1", "texture": "Special_Attack_1.png", "rows": 1, "cols": 6},
+        {"name": "Special_Attack_2", "texture": "Special_Attack_2.png", "rows": 1, "cols": 4},
+        {"name": "Special_Attack_3", "texture": "Special_Attack_3.png", "rows": 1, "cols": 4},
+        {"name": "Take", "texture": "Take.png", "rows": 1, "cols": 6},
+        {"name": "Attack_1", "texture": "Attack_1.png", "rows": 1, "cols": 5},
+        {"name": "Attack_2", "texture": "Attack_2.png", "rows": 1, "cols": 4},
+        {"name": "Attack_3", "texture": "Attack_3.png", "rows": 1, "cols": 6},
+        {"name": "Attack_4", "texture": "Attack_4.png", "rows": 1, "cols": 5},
+        {"name": "Climb", "texture": "Climb.png", "rows": 1, "cols": 6},
+        {"name": "Dead", "texture": "Dead.png", "rows": 1, "cols": 4},
+        {"name": "Run", "texture": "Run.png", "rows": 1, "cols": 8},
+        {"name": "Idle", "texture": "Idle.png", "rows": 1, "cols": 5},
+        {"name": "Hurt", "texture": "Hurt.png", "rows": 1, "cols": 2},
+        {"name": "Jump", "texture": "Jump.png", "rows": 1, "cols": 7}
+
+      ]
+    }
+  ]
+}

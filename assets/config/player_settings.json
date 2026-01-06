@@ -1,0 +1,29 @@
+{
+  "movement": {
+    "moveSpeed": 2.0,
+    "acceleration": 24.0,
+    "deceleration": 24.0,
+    "jumpImpulse": 4.25,
+    "gravity": 9.81,
+    "walkSpeedMultiplier": 0.5,
+    "walkAxisThreshold": 0.6,
+    "runAxisThreshold": 0.85,
+    "climbSpeed": 1.75,
+    "climbAcceleration": 18.0,
+    "ledgeProbeDistance": 0.6,
+    "ledgeHorizontalOffset": 0.25,
+    "ledgeVerticalOffset": 0.65,
+    "hangVerticalOffset": 0.1,
+    "hangClimbOffset": 0.4
+  },
+  "combat": {
+    "attackRange": 90.0,
+    "attackCooldown": 0.4,
+    "attackDamage": 16.0
+  },
+  "health": {
+    "maxHp": 140.0,
+    "armor": 6.0,
+    "regenRate": 0.5
+  }
+}
