@@ -21,6 +21,7 @@ public:
     TransformFollowerComponent &operator=(TransformFollowerComponent &&) = delete;
 
     void setTarget(Entity *target) { m_target = target; }
+    [[nodiscard]] Entity* target() const noexcept { return m_target; }
     void setOffset(const glm::vec2 &offset) { m_offset = offset; }
     void setCopyRotation(bool copy) { m_copyRotation = copy; }
 
@@ -31,23 +32,5 @@ private:
     glm::vec2 m_offset{0.0f, 0.0f};
     bool m_copyRotation{true};
 };
-
-void TransformFollowerComponent::update(Entity &owner, double /*dt*/) {
-    if (!m_target) {
-        return;
-    }
-
-    auto *targetTransform = m_target->getComponent<TransformComponent>();
-    auto *ownerTransform = owner.getComponent<TransformComponent>();
-    if (!targetTransform || !ownerTransform) {
-        return;
-    }
-
-    const auto &source = targetTransform->getTransform();
-    ownerTransform->setPosition(source.Position + m_offset);
-    if (m_copyRotation) {
-        ownerTransform->setRotation(source.Rotation);
-    }
-}
 
 #endif // GL2D_TRANSFORMFOLLOWERCOMPONENT_HPP

@@ -23,6 +23,7 @@ public:
     struct Intent {
         float moveAxis{0.0f}; // -1 = left, +1 = right
         bool jumpPressed{false};
+        bool jumpReleased{false};
         float climbAxis{0.0f}; // +1 = up, -1 = down
     };
 
@@ -31,6 +32,9 @@ public:
         float acceleration{PhysicsUnits::toUnits(20.0f)};
         float deceleration{PhysicsUnits::toUnits(20.0f)};
         float jumpImpulse{PhysicsUnits::toUnits(4.0f)};
+        float coyoteTime{0.1f};
+        float jumpBufferTime{0.12f};
+        float jumpCutMultiplier{0.45f};
         float gravity{PhysicsUnits::toUnits(9.81f)};
         float walkSpeedMultiplier{0.5f};
         float walkAxisThreshold{0.6f};
@@ -50,7 +54,7 @@ public:
     ~CharacterController() override = default;
 
     void update(Entity& entity, double dt) override;
-    void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot);
+    void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot) override;
     void resetFeelingOverrides();
     void setWorldEntities(std::vector<std::unique_ptr<Entity>>* world);
     void resetVelocity();
@@ -98,6 +102,11 @@ protected:
     float m_acceleration{PhysicsUnits::toUnits(20.0f)};
     float m_deceleration{PhysicsUnits::toUnits(20.0f)};
     float m_jumpImpulse{PhysicsUnits::toUnits(4.0f)};
+    float m_coyoteTime{0.1f};
+    float m_jumpBufferTime{0.12f};
+    float m_jumpCutMultiplier{0.45f};
+    float m_coyoteRemaining{0.0f};
+    float m_jumpBufferRemaining{0.0f};
     float m_gravity{PhysicsUnits::toUnits(9.81f)};
     float m_walkSpeedMultiplier{0.5f}; // fraction of run speed when stick is slightly tilted
     float m_walkAxisThreshold{0.6f};   // analog magnitude at/under this stays in walk
@@ -105,6 +114,7 @@ protected:
     float m_climbSpeed{PhysicsUnits::toUnits(1.75f)};
     float m_climbAcceleration{PhysicsUnits::toUnits(18.0f)};
     bool m_isClimbing{false};
+    bool m_prevBodyVelocityQuiet{true};
     MoveMode m_lastMoveMode{MoveMode::Idle};
     int m_faceDirection{1};
 

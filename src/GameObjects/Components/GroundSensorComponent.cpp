@@ -5,8 +5,8 @@
 #include "GameObjects/Entity.hpp"
 #include "Physics/Collision/AABB.hpp"
 #include "Physics/PhysicsCasts.hpp"
+#include "RenderingSystem/DebugDraw2D.hpp"
 #include <glm/glm.hpp>
-#include <GL/glew.h>
 
 namespace {
 constexpr float kEpsilon = 1e-5f;
@@ -158,10 +158,10 @@ void GroundSensorComponent::update(Entity& owner, double /*dt*/) {
     refresh(owner);
 }
 
-void GroundSensorComponent::debugDraw(const glm::mat4& viewProj,
+void GroundSensorComponent::debugDraw(Rendering::Renderer& renderer,
                                       Entity& owner,
-                                      const glm::vec3& groundColor,
-                                      const glm::vec3& wallColor) const {
+                                      const glm::vec4& groundColor,
+                                      const glm::vec4& wallColor) const {
     auto* colliderComp = owner.getComponent<ColliderComponent>();
     if (!colliderComp) return;
 
@@ -175,25 +175,13 @@ void GroundSensorComponent::debugDraw(const glm::mat4& viewProj,
     const glm::vec2 leftCenter{bounds.getMin().x - m_wallOffset, center.y};
     const glm::vec2 rightCenter{bounds.getMax().x + m_wallOffset, center.y};
 
-    glUseProgram(0);
-    glMatrixMode(GL_PROJECTION);
-    glLoadMatrixf(&viewProj[0][0]);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glLineWidth(1.0f);
-
-    auto drawRay = [](const glm::vec2& from, const glm::vec2& dir, float len, const glm::vec3& color) {
-        glColor3f(color.r, color.g, color.b);
-        glBegin(GL_LINES);
-        glVertex2f(from.x, from.y);
+    auto drawRay = [&renderer](const glm::vec2& from,
+                               const glm::vec2& dir,
+                               float len,
+                               const glm::vec4& color) {
         const glm::vec2 to = from + dir * len;
-        glVertex2f(to.x, to.y);
-        glEnd();
-        // tip
-        glPointSize(4.0f);
-        glBegin(GL_POINTS);
-        glVertex2f(to.x, to.y);
-        glEnd();
+        Rendering::DebugDraw2D::line(renderer, from, to, 1.0f, color);
+        Rendering::DebugDraw2D::point(renderer, to, 4.0f, color);
     };
 
     // Draw last-known probes based on stored hits/distances; fall back to probe max.

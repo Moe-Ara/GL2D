@@ -9,6 +9,7 @@
 #include <glm/gtc/constants.hpp>
 #include <vector>
 #include <string>
+#include <cstdint>
 
 class Scene;
 class Entity;
@@ -26,6 +27,10 @@ struct RopePrefabConfig {
     float segmentMass{0.2f};
     float segmentLinearDamping{2.5f};
     float segmentAngularDamping{3.5f};
+    // Connected segments share this layer and exclude it from their masks, so
+    // a rope still collides with the world/player but not with itself.
+    std::uint32_t collisionLayer{31u};
+    std::uint32_t collisionMask{0x7FFFFFFFu};
     bool limitEnabled{true};
     float lowerLimit{-glm::half_pi<float>() * 0.5f};
     float upperLimit{glm::half_pi<float>() * 0.5f};
@@ -43,6 +48,7 @@ struct RopePrefabConfig {
 
 struct RopePrefabResult {
     std::vector<Entity*> segments;
+    Entity* anchor{nullptr};
 };
 
 class RopePrefab {

@@ -13,17 +13,6 @@
 
 namespace Audio {
 
-    namespace {
-        void music_end_callback(void* pUserData, ma_sound* pSound) {
-            (void)pSound;
-            AudioManager* mgr = reinterpret_cast<AudioManager*>(pUserData);
-        if (mgr != nullptr) {
-                // Only clear active if this is the current music slot.
-                mgr->notifyMusicStopped(pSound);
-            }
-        }
-    }
-
     AudioManager::AudioManager() = default;
     AudioManager::~AudioManager() {
         shutdown();
@@ -203,14 +192,6 @@ namespace Audio {
             cleanupSlot(slot, slotInit);
             return false;
         }
-
-        ma_uint64 lengthFrames = 0;
-        ma_result lenRes = ma_sound_get_length_in_pcm_frames(slot, &lengthFrames);
-        ma_uint32 sr = 0;
-        ma_uint32 ch = 0;
-        ma_format fmt;
-        ma_sound_get_data_format(slot, &fmt, &ch, &sr, nullptr, 0);
-        double lengthSeconds = (lenRes == MA_SUCCESS && sr > 0) ? static_cast<double>(lengthFrames) / static_cast<double>(sr) : -1.0;
 
         m_currentMusic = slot;
         m_musicActive = true;
@@ -484,9 +465,6 @@ namespace Audio {
                             std::cerr << "[Audio] Warning: pending music not playing after start\n";
                         }
                         ma_sound_set_volume(nextSlot, m_musicBaseVolume);
-                        ma_uint64 nLenFrames = 0;
-                        ma_result nLenRes = ma_sound_get_length_in_pcm_frames(nextSlot, &nLenFrames);
-
                         if (m_currentMusic != nullptr) {
                             ma_sound_set_fade_in_milliseconds(m_currentMusic, m_musicBaseVolume, 0.0f, m_pendingFadeMs);
                         }
@@ -501,9 +479,6 @@ namespace Audio {
                         m_musicLoop = m_pendingMusicLoop;
                         m_usingA = (nextSlot == &m_musicSoundA);
                         m_hasPendingMusic = false;
-                        bool curPlaying = ma_sound_is_playing(m_currentMusic) == MA_TRUE;
-                        float curVol = ma_sound_get_volume(m_currentMusic);
-
                     }
                 }
             }
@@ -517,9 +492,6 @@ namespace Audio {
             if (lenRes == MA_SUCCESS && lengthFrames > 0 &&
                 playing == MA_FALSE && atEnd == MA_TRUE) {
                 m_musicActive = false;
-
-            } else if (playing == MA_FALSE) {
-                float vol = ma_sound_get_volume(m_currentMusic);
 
             }
         }

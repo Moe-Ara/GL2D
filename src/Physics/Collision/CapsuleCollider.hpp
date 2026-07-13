@@ -26,6 +26,7 @@ public:
   std::unique_ptr<Hit> hit(const ICollider &other) const override;
   glm::vec2 getWorldA() const;
   glm::vec2 getWorldB() const;
+  float getWorldRadius() const;
 
 private:
   glm::vec2 m_localA{};

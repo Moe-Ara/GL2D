@@ -6,6 +6,7 @@
 #define GL2D_INPUTSERVICE_HPP
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -30,6 +31,7 @@ public:
 
     const std::unordered_map<int, InputDevice>& getConnectedDevices() const;
     const std::vector<ActionEvent>& getActionEvents() const { return m_actionEvents; }
+    [[nodiscard]] std::uint64_t actionFrame() const noexcept { return m_actionFrame; }
 
     void loadBindingsFromFile(const std::string& filepath, const std::string& defaultProfile = "");
     void setBindings(InputSystem::InputBindings bindings, const std::string& defaultProfile = "");
@@ -88,12 +90,14 @@ private:
     std::vector<InputEvent> m_pendingEvents;
     std::vector<InputEvent> m_eventBuffer;
     std::vector<ActionEvent> m_actionEvents;
+    std::uint64_t m_actionFrame{0};
     std::unordered_map<int, InputDevice> m_devices;
     std::unordered_map<int, GamepadState> m_gamepadStates;
     glm::vec2 m_lastCursorPos{0.0f, 0.0f};
     bool m_cursorInitialized{false};
     void registerBuiltinDevices();
     static InputService* s_activeService;
+    static std::unordered_map<GLFWwindow*, InputService*> s_windowServices;
     InputDeviceType m_lastProfileDevice{InputDeviceType::Unknown};
 
     InputSystem::InputBindings m_bindings;

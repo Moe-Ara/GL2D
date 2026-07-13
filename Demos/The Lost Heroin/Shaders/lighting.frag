@@ -8,7 +8,7 @@ uniform sampler2D uNormalTex;
 uniform sampler2D uCookieTex[8];
 uniform vec3 uAmbient;
 uniform int uLightCount;
-uniform vec4 uViewBounds; // minX, minY, maxX, maxY
+uniform mat4 uInverseViewProjection;
 
 struct Light {
     int type;          // 0=point,1=directional,2=spot
@@ -26,6 +26,18 @@ struct Light {
 };
 uniform Light uLights[8];
 
+float sampleCookie(int slot, vec2 uv) {
+    if (slot == 0) return texture(uCookieTex[0], uv).r;
+    if (slot == 1) return texture(uCookieTex[1], uv).r;
+    if (slot == 2) return texture(uCookieTex[2], uv).r;
+    if (slot == 3) return texture(uCookieTex[3], uv).r;
+    if (slot == 4) return texture(uCookieTex[4], uv).r;
+    if (slot == 5) return texture(uCookieTex[5], uv).r;
+    if (slot == 6) return texture(uCookieTex[6], uv).r;
+    if (slot == 7) return texture(uCookieTex[7], uv).r;
+    return 1.0;
+}
+
 void main() {
     vec4 sceneSample = texture(uSceneTex, vUV);
     vec3 albedo = sceneSample.rgb;
@@ -36,10 +48,10 @@ void main() {
         N = vec3(0.0, 0.0, 1.0);
     }
 
-    // Reconstruct world position from UV and view bounds (orthographic).
-    vec2 worldPos;
-    worldPos.x = mix(uViewBounds.x, uViewBounds.z, vUV.x);
-    worldPos.y = mix(uViewBounds.y, uViewBounds.w, vUV.y);
+    // Reconstruct world position from the exact camera transform, including rotation.
+    vec2 ndc = vUV * 2.0 - 1.0;
+    vec4 world = uInverseViewProjection * vec4(ndc, 0.0, 1.0);
+    vec2 worldPos = world.xy / world.w;
 
     vec3 lit = albedo * uAmbient;
 
@@ -82,7 +94,7 @@ void main() {
                 vec2 perp = vec2(-dirNorm.y, dirNorm.x);
                 vec2 local = vec2(dot(perp, fragDir), dot(dirNorm, fragDir));
                 vec2 uv = local * 0.5 + 0.5;
-                float cookie = texture(uCookieTex[l.cookieSlot], uv).r;
+                float cookie = sampleCookie(l.cookieSlot, uv);
                 att *= mix(1.0, cookie, clamp(l.cookieStrength, 0.0, 1.0));
             }
         } else {

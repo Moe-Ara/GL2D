@@ -1,32 +1,39 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <utility>
+
+namespace AI {
+
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeSelector() {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Selector;
-    return n;
+    return std::unique_ptr<Node>(new Node(NodeType::Selector));
 }
 
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeSequence() {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Sequence;
-    return n;
+    return std::unique_ptr<Node>(new Node(NodeType::Sequence));
 }
 
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeAction(std::function<NodeStatus(TContext*)> fn) {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Action;
-    n->tickFn = std::move(fn);
+    if (!fn) {
+        throw std::invalid_argument("BehaviourTree action requires a callback");
+    }
+    auto n = std::unique_ptr<Node>(new Node(NodeType::Action));
+    n->m_tickFn = std::move(fn);
     return n;
 }
 
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeCondition(std::function<bool(TContext*)> fn) {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Condition;
-    n->tickFn = [fn = std::move(fn)](TContext* ctx) {
+    if (!fn) {
+        throw std::invalid_argument("BehaviourTree condition requires a callback");
+    }
+    auto n = std::unique_ptr<Node>(new Node(NodeType::Condition));
+    n->m_tickFn = [fn = std::move(fn)](TContext* ctx) {
         return fn(ctx) ? NodeStatus::Success : NodeStatus::Failure;
     };
     return n;
@@ -34,101 +41,115 @@ std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>:
 
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeInverter(std::unique_ptr<Node> child) {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Action;
-    n->children.push_back(std::move(child));
-    n->tickFn = [](TContext* ctx) { return NodeStatus::Failure; }; // placeholder; logic in tick
+    if (!child) {
+        throw std::invalid_argument("BehaviourTree inverter requires a child");
+    }
+    auto n = std::unique_ptr<Node>(new Node(NodeType::Inverter));
+    n->m_children.push_back(std::move(child));
     return n;
 }
 
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeSucceeder(std::unique_ptr<Node> child) {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Action;
-    n->children.push_back(std::move(child));
-    n->tickFn = [](TContext* ctx) { return NodeStatus::Success; };
+    if (!child) {
+        throw std::invalid_argument("BehaviourTree succeeder requires a child");
+    }
+    auto n = std::unique_ptr<Node>(new Node(NodeType::Succeeder));
+    n->m_children.push_back(std::move(child));
     return n;
 }
 
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeFailer(std::unique_ptr<Node> child) {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Action;
-    n->children.push_back(std::move(child));
-    n->tickFn = [](TContext* ctx) { return NodeStatus::Failure; };
+    if (!child) {
+        throw std::invalid_argument("BehaviourTree failer requires a child");
+    }
+    auto n = std::unique_ptr<Node>(new Node(NodeType::Failer));
+    n->m_children.push_back(std::move(child));
     return n;
 }
 
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeCooldown(std::unique_ptr<Node> child, float seconds) {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Action;
-    n->children.push_back(std::move(child));
-    n->tickFn = [seconds](TContext* /*ctx*/) {
-        // Actual timing handled in tickNode using m_cooldowns.
-        return NodeStatus::Running;
-    };
-    // Abuse runningChild to store desired cooldown in seconds when leaf tickFn is executed.
-    n->runningChild = static_cast<int>(seconds * 1000.0f); // store milliseconds as int.
+    if (!child) {
+        throw std::invalid_argument("BehaviourTree cooldown requires a child");
+    }
+    if (!std::isfinite(seconds) || seconds < 0.0f) {
+        throw std::invalid_argument("BehaviourTree cooldown duration must be finite and non-negative");
+    }
+    auto n = std::unique_ptr<Node>(new Node(NodeType::Cooldown));
+    n->m_children.push_back(std::move(child));
+    n->m_durationSeconds = seconds;
     return n;
 }
 
 template<typename TContext>
 std::unique_ptr<typename BehaviourTree<TContext>::Node> BehaviourTree<TContext>::makeRepeater(std::unique_ptr<Node> child, int count) {
-    auto n = std::make_unique<Node>();
-    n->type = NodeType::Action;
-    n->children.push_back(std::move(child));
-    n->tickFn = [count](TContext* ctx) {
-        return NodeStatus::Failure;
-    };
+    if (!child) {
+        throw std::invalid_argument("BehaviourTree repeater requires a child");
+    }
+    if (count < -1) {
+        throw std::invalid_argument("BehaviourTree repeat count must be -1 or non-negative");
+    }
+    auto n = std::unique_ptr<Node>(new Node(NodeType::Repeater));
+    n->m_children.push_back(std::move(child));
+    n->m_repeatLimit = count;
     return n;
 }
 
 template<typename TContext>
 NodeStatus BehaviourTree<TContext>::tick(TContext* ctx, float dt) {
+    if (!std::isfinite(dt) || dt < 0.0f) {
+        throw std::invalid_argument("BehaviourTree tick delta must be finite and non-negative");
+    }
     if (!m_root) return NodeStatus::Failure;
     return tickNode(*m_root, ctx, dt);
 }
 
 template<typename TContext>
 void BehaviourTree<TContext>::reset() {
-    std::function<void(Node&)> walk = [&](Node& n) {
-        n.runningChild = -1;
-        for (auto& c : n.children) {
-            if (c) walk(*c);
-        }
-    };
-    if (m_root) walk(*m_root);
+    if (m_root) resetNode(*m_root);
+}
+
+template<typename TContext>
+void BehaviourTree<TContext>::resetNode(Node& node) {
+    node.m_runningChild = 0;
+    node.m_hasRunningChild = false;
+    node.m_remainingSeconds = 0.0f;
+    node.m_repetitions = 0;
+    for (auto& child : node.m_children) {
+        if (child) resetNode(*child);
+    }
 }
 
 template<typename TContext>
 NodeStatus BehaviourTree<TContext>::tickNode(Node& node, TContext* ctx, float dt) {
-    switch (node.type) {
+    switch (node.m_type) {
         case NodeType::Selector: {
-            int startIdx = std::max(0, node.runningChild);
-            node.runningChild = -1;
-            for (int i = startIdx; i < static_cast<int>(node.children.size()); ++i) {
-                auto& child = node.children[i];
-                if (!child) continue;
+            const std::size_t startIdx = node.m_hasRunningChild ? node.m_runningChild : 0;
+            node.m_hasRunningChild = false;
+            for (std::size_t i = startIdx; i < node.m_children.size(); ++i) {
+                auto& child = node.m_children[i];
                 const NodeStatus s = tickNode(*child, ctx, dt);
                 if (s == NodeStatus::Success) return s;
                 if (s == NodeStatus::Running) {
-                    node.runningChild = i;
+                    node.m_runningChild = i;
+                    node.m_hasRunningChild = true;
                     return s;
                 }
             }
             return NodeStatus::Failure;
         }
         case NodeType::Sequence: {
-            int startIdx = std::max(0, node.runningChild);
-            node.runningChild = -1;
-            for (int i = startIdx; i < static_cast<int>(node.children.size()); ++i) {
-                auto& child = node.children[i];
-                if (!child) continue;
+            const std::size_t startIdx = node.m_hasRunningChild ? node.m_runningChild : 0;
+            node.m_hasRunningChild = false;
+            for (std::size_t i = startIdx; i < node.m_children.size(); ++i) {
+                auto& child = node.m_children[i];
                 const NodeStatus s = tickNode(*child, ctx, dt);
                 if (s == NodeStatus::Failure) return s;
                 if (s == NodeStatus::Running) {
-                    node.runningChild = i;
+                    node.m_runningChild = i;
+                    node.m_hasRunningChild = true;
                     return s;
                 }
             }
@@ -136,31 +157,48 @@ NodeStatus BehaviourTree<TContext>::tickNode(Node& node, TContext* ctx, float dt
         }
         case NodeType::Action:
         case NodeType::Condition: {
-            if (node.tickFn) {
-                // Cooldown decorator: node has a single child and tickFn returned Running, and runningChild encodes cooldown ms.
-                if (!node.children.empty() && node.children[0] && node.tickFn(ctx) == NodeStatus::Running) {
-                    const float cooldownSeconds = static_cast<float>(node.runningChild) / 1000.0f;
-                    float& timer = m_cooldowns[&node];
-                    if (timer > 0.0f) {
-                        timer = std::max(0.0f, timer - dt);
-                        if (timer > 0.0f) {
-                            return NodeStatus::Failure;
-                        }
-                        // timer expired this tick; fall through and attempt child.
-                    }
-                    // Attempt child
-                    auto childStatus = tickNode(*node.children[0], ctx, dt);
-                    if (childStatus == NodeStatus::Success) {
-                        timer = cooldownSeconds;
-                        return NodeStatus::Success;
-                    }
-                    return childStatus;
-                }
-                return node.tickFn(ctx);
-            }
-            return NodeStatus::Failure;
+            return node.m_tickFn ? node.m_tickFn(ctx) : NodeStatus::Failure;
         }
-        default:
-            return NodeStatus::Failure;
+        case NodeType::Inverter: {
+            const NodeStatus status = tickNode(*node.m_children.front(), ctx, dt);
+            if (status == NodeStatus::Success) return NodeStatus::Failure;
+            if (status == NodeStatus::Failure) return NodeStatus::Success;
+            return NodeStatus::Running;
+        }
+        case NodeType::Succeeder: {
+            const NodeStatus status = tickNode(*node.m_children.front(), ctx, dt);
+            return status == NodeStatus::Running ? NodeStatus::Running : NodeStatus::Success;
+        }
+        case NodeType::Failer: {
+            const NodeStatus status = tickNode(*node.m_children.front(), ctx, dt);
+            return status == NodeStatus::Running ? NodeStatus::Running : NodeStatus::Failure;
+        }
+        case NodeType::Cooldown: {
+            if (node.m_remainingSeconds > 0.0f) {
+                node.m_remainingSeconds = std::max(0.0f, node.m_remainingSeconds - dt);
+                if (node.m_remainingSeconds > 0.0f) return NodeStatus::Failure;
+            }
+            const NodeStatus status = tickNode(*node.m_children.front(), ctx, dt);
+            if (status == NodeStatus::Success) {
+                node.m_remainingSeconds = node.m_durationSeconds;
+            }
+            return status;
+        }
+        case NodeType::Repeater: {
+            if (node.m_repeatLimit == 0) return NodeStatus::Success;
+
+            const NodeStatus status = tickNode(*node.m_children.front(), ctx, dt);
+            if (status == NodeStatus::Running) return NodeStatus::Running;
+
+            ++node.m_repetitions;
+            if (node.m_repeatLimit >= 0 && node.m_repetitions >= node.m_repeatLimit) {
+                node.m_repetitions = 0;
+                return NodeStatus::Success;
+            }
+            return NodeStatus::Running;
+        }
     }
+    return NodeStatus::Failure;
 }
+
+} // namespace AI

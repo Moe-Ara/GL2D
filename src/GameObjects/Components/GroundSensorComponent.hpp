@@ -5,12 +5,13 @@
 #include "Physics/PhysicsUnits.hpp"
 
 #include <functional>
-#include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include <memory>
 #include <vector>
 
 class Entity;
+namespace Rendering { class Renderer; }
 
 // Performs ground and wall sensing using ray casts with layer masks. Emits
 // landed/left-ground callbacks when state changes.
@@ -50,10 +51,10 @@ public:
     bool hasPlatformContact() const { return m_platformEntity != nullptr; }
     Entity* platformEntity() const { return m_platformEntity; }
     glm::vec2 platformVelocity() const { return m_platformVelocity; }
-    void debugDraw(const glm::mat4& viewProj,
+    void debugDraw(Rendering::Renderer& renderer,
                    Entity& owner,
-                   const glm::vec3& groundColor = {0.2f, 0.9f, 0.2f},
-                   const glm::vec3& wallColor = {0.2f, 0.6f, 1.0f}) const;
+                   const glm::vec4& groundColor = {0.2f, 0.9f, 0.2f, 1.0f},
+                   const glm::vec4& wallColor = {0.2f, 0.6f, 1.0f, 1.0f}) const;
 
 private:
     HitInfo castSensor(const glm::vec2& origin,

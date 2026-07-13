@@ -16,8 +16,10 @@
 #include <functional>
 #include <memory>
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 
 class Entity;
+namespace Rendering { class Renderer; }
 
 class ColliderComponent : public IUpdatableComponent {
 public:
@@ -51,8 +53,10 @@ public:
     bool isTrigger() const { return m_isTrigger; }
     bool triggersOnce() const { return m_triggerOnce; }
     void setOnTriggerEnter(std::function<void(Entity&, Entity&)> callback) { m_onTriggerEnter = std::move(callback); }
+    void setOnTriggerStay(std::function<void(Entity&, Entity&)> callback) { m_onTriggerStay = std::move(callback); }
     void setOnTriggerExit(std::function<void(Entity&, Entity&)> callback) { m_onTriggerExit = std::move(callback); }
     void invokeTriggerEnter(Entity& owner, Entity& other);
+    void invokeTriggerStay(Entity& owner, Entity& other);
     void invokeTriggerExit(Entity& owner, Entity& other);
     void setCapsuleSizeOverride(const glm::vec2& size);
     void clearCapsuleSizeOverride();
@@ -62,8 +66,9 @@ public:
     bool fitToSprite(Entity& owner, float padding = 0.0f);
     // Ensure a collider exists; if missing, create based on requested type.
     void ensureCollider(Entity& owner);
-    // Debug draw the collider (wireframe). Expects an orthographic viewProj already set.
-    void debugDraw(const glm::mat4& viewProj, const glm::vec3& color = {1.0f, 0.0f, 0.0f}) const;
+    // Queue a world-space collider wireframe through the core-profile renderer.
+    void debugDraw(Rendering::Renderer& renderer,
+                   const glm::vec4& color = {1.0f, 0.0f, 0.0f, 1.0f}) const;
 
 private:
     std::unique_ptr<ACollider> createCollider(ColliderType type) const;
@@ -82,6 +87,7 @@ private:
     glm::vec2 m_capsuleOffsetOverride{0.0f, 0.0f};
     bool m_capsuleOffsetOverrideActive{false};
     std::function<void(Entity&, Entity&)> m_onTriggerEnter{};
+    std::function<void(Entity&, Entity&)> m_onTriggerStay{};
     std::function<void(Entity&, Entity&)> m_onTriggerExit{};
 };
 

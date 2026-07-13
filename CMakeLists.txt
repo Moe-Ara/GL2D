@@ -3,18 +3,26 @@ project(GL2D LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Include vcpkg toolchain file (CLion may also set this via profiles)
-set(CMAKE_TOOLCHAIN_FILE "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-        CACHE STRING "Vcpkg toolchain file")
+option(GL2D_BUILD_EDITOR "Build the Qt-based GL2D editor" OFF)
+option(GL2D_BUILD_DEMO "Build The Lost Heroin demo" ON)
+option(GL2D_BUILD_TESTS "Build the GL2D test suite" OFF)
+option(GL2D_BUILD_BENCHMARKS "Build GL2D microbenchmarks" OFF)
 
 # Find packages
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glm CONFIG REQUIRED)
-find_package(Boost REQUIRED COMPONENTS unit_test_framework)
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+
+if(GL2D_BUILD_EDITOR)
+    find_package(Qt5 COMPONENTS Widgets REQUIRED)
+endif()
+
+if(GL2D_BUILD_TESTS)
+    find_package(Boost REQUIRED COMPONENTS unit_test_framework)
+endif()
 
 # Paths
 set(SRC_DIR     ${CMAKE_SOURCE_DIR}/src)
@@ -30,13 +38,11 @@ set(GL2D_NORMAL_BLUR     0.0 CACHE STRING "Normal generation blur radius")
 # Gather all engine source and header files and rerun the configure stage when files change.
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${SRC_DIR}/*.cpp")
 file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "${SRC_DIR}/*.hpp" "${SRC_DIR}/*.h")
-
-# Tests
-file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Testing/*.cpp")
+list(REMOVE_ITEM SOURCES "${SRC_DIR}/third_party/stb/stb_image.cpp")
 
 # === stb_image as separate lib ===
 add_library(stb_image STATIC src/third_party/stb/stb_image.cpp)
-target_include_directories(stb_image PUBLIC third_party/stb)
+target_include_directories(stb_image PUBLIC ${SRC_DIR})
 
 # === ENGINE LIBRARY ===
 add_library(gl2d_engine STATIC ${SOURCES} ${HEADERS})
@@ -77,8 +83,16 @@ target_link_libraries(GL2D
         gl2d_engine
 )
 
-add_subdirectory(editor)
-add_dependencies(GL2D GL2DEditor)
+if(GL2D_BUILD_BENCHMARKS)
+    add_executable(GL2D_ECS_BENCHMARK tools/ecs_benchmark.cpp)
+    target_link_libraries(GL2D_ECS_BENCHMARK PRIVATE gl2d_engine)
+    add_executable(GL2D_SCENE_BENCHMARK tools/scene_benchmark.cpp)
+    target_link_libraries(GL2D_SCENE_BENCHMARK PRIVATE gl2d_engine)
+endif()
+
+if(GL2D_BUILD_EDITOR)
+    add_subdirectory(editor)
+endif()
 
 # Copy shared resources into the build dir (for GL2D + demos)
 file(COPY ${SHADERS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -114,33 +128,20 @@ if(GL2D_GENERATE_NORMALS)
     add_dependencies(gl2d_engine generate_sprite_normals)
 endif()
 
-# === TESTS ===
-enable_testing()
+if(GL2D_BUILD_TESTS)
+    enable_testing()
+    file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Testing/*.cpp")
 
-
-add_executable(GL2D_TEST ${TEST_SOURCES})
-target_include_directories(GL2D_TEST PRIVATE
-        ${Boost_INCLUDE_DIRS}
-        ${OPENGL_INCLUDE_DIRS}
-        ${GLEW_INCLUDE_DIRS}
-        ${GLM_INCLUDE_DIRS}
-        ${SRC_DIR}
-)
-
-target_link_libraries(GL2D_TEST
-        PRIVATE
-        gl2d_engine
-        ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-)
-
-add_test(NAME GL2D_TEST COMMAND GL2D_TEST)
-add_dependencies(GL2D GL2D_TEST)
+    add_executable(GL2D_TEST ${TEST_SOURCES})
+    target_include_directories(GL2D_TEST PRIVATE ${Boost_INCLUDE_DIRS})
+    target_link_libraries(GL2D_TEST PRIVATE gl2d_engine Boost::unit_test_framework)
+    add_test(NAME GL2D_TEST COMMAND GL2D_TEST)
+endif()
 
 message(STATUS "Project: ${PROJECT_NAME}")
-message(STATUS "Using vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
 
 # === DEMO(S) ===
-add_subdirectory("Demos/The Lost Heroin")
-if(TARGET TheLostHeroin)
-    add_dependencies(GL2D TheLostHeroin)
+if(GL2D_BUILD_DEMO)
+    add_subdirectory("Demos/The Lost Heroin")
+    add_subdirectory("Demos/ECS Platformer")
 endif()

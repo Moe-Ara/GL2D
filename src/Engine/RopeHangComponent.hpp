@@ -4,11 +4,14 @@
 #include "GameObjects/IComponent.hpp"
 #include "GameObjects/Components/RopeSegmentComponent.hpp"
 #include "InputSystem/InputTypes.hpp"
+#include "Physics/RigidBody.hpp"
 
 #include <glm/vec2.hpp>
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstdint>
+#include <limits>
 
 class ControllerComponent;
 class Entity;
@@ -24,18 +27,22 @@ public:
 
     void update(Entity& owner, double dt) override;
 
-    void setDetectionRadius(float radius) { m_detectionRadius = radius; }
-    void setClimbSpeed(float speed) { m_climbSpeed = speed; }
+    void setDetectionRadius(float radius);
+    void setClimbSpeed(float speed);
+    void setReleaseSpeed(float speed);
     void setGrabAction(const std::string& action) { m_grabAction = action; }
     void setReleaseAction(const std::string& action) { m_releaseAction = action; }
+    [[nodiscard]] bool isHanging() const noexcept { return m_isHanging; }
 
 private:
     void consumeActionEvent(const ActionEvent& event);
     Entity* findNearbyRope(Entity& owner) const;
-    void applyRopePosition(Entity& owner);
+    bool applyRopePosition(Entity& owner);
     void startHang(Entity& owner, Entity& ropeEntity, RopeSegmentComponent& ropeInfo);
-    void stopHang(Entity& owner);
+    void stopHang(Entity& owner, bool jumpRelease = false);
     void updateHangMovement(Entity& owner, double dt);
+    [[nodiscard]] bool containsWorldEntity(const Entity* entity) const;
+    [[nodiscard]] RopeSegmentComponent* ropeInfo(Entity* entity) const;
 
     InputService& m_inputService;
     ControllerComponent& m_controller;
@@ -43,16 +50,16 @@ private:
 
     float m_detectionRadius{0.0f};
     float m_climbSpeed{0.0f};
+    float m_releaseSpeed{0.0f};
     std::string m_grabAction{"Interact"};
     std::string m_releaseAction{"Jump"};
 
     bool m_isHanging{false};
     Entity* m_currentSegment{nullptr};
-    float m_ropeLength{0.0f};
-    float m_ropeParam{0.0f};
-    glm::vec2 m_ropeDirection{0.0f, -1.0f};
-    glm::vec2 m_ropeTop{0.0f};
-    glm::vec2 m_ropeBottom{0.0f};
+    float m_segmentDistance{0.0f};
+    RigidBodyType m_previousBodyType{RigidBodyType::DYNAMIC};
+    float m_previousGravityScale{1.0f};
+    bool m_controllerWasEnabled{true};
 
     bool m_grabRequested{false};
     bool m_releaseRequested{false};
@@ -60,6 +67,7 @@ private:
     bool m_axisUpdated{false};
     bool m_moveUp{false};
     bool m_moveDown{false};
+    std::uint64_t m_lastActionFrame{std::numeric_limits<std::uint64_t>::max()};
 };
 
 #endif // GL2D_ROPEHANGCOMPONENT_HPP

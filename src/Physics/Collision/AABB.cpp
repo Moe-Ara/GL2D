@@ -1,13 +1,29 @@
 #include "AABB.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <stdexcept>
 #include <glm/vec2.hpp>
+#include <glm/common.hpp>
+
+AABB::AABB(const glm::vec2& minPoint, const glm::vec2& maxPoint) {
+  if (!std::isfinite(minPoint.x) || !std::isfinite(minPoint.y) ||
+      !std::isfinite(maxPoint.x) || !std::isfinite(maxPoint.y)) {
+    throw std::invalid_argument("AABB bounds must be finite");
+  }
+  m_min = glm::min(minPoint, maxPoint);
+  m_max = glm::max(minPoint, maxPoint);
+}
+
 float AABB::width() const { return m_max.x - m_min.x; }
 float AABB::height() const { return m_max.y - m_min.y; }
 glm::vec2 AABB::center() const { return (m_min + m_max) * 0.5f; }
 glm::vec2 AABB::getMin() const { return m_min; }
 glm::vec2 AABB::getMax() const { return m_max; }
 AABB AABB::expanded(float amount) const {
+  if (!std::isfinite(amount)) {
+    throw std::invalid_argument("AABB expansion must be finite");
+  }
   return AABB{glm::vec2(m_min.x - amount, m_min.y - amount),
               glm::vec2(m_max.x + amount, m_max.y + amount)};
 }

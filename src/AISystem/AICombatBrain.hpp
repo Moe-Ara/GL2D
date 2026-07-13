@@ -3,15 +3,21 @@
 
 #include <glm/vec2.hpp>
 
-// Minimal combat brain: tracks cooldown and range for a single attack.
+// Deterministic range/cooldown gate for AI or scripted combat. Time progression
+// is separate from attack attempts so losing a target does not pause cooldowns.
 class AICombatBrain {
 public:
-    void setAttackRange(float range) { m_attackRange = range; }
-    void setCooldown(float seconds) { m_cooldown = seconds; }
+    void setAttackRange(float range);
+    void setCooldown(float seconds);
 
-    // Returns true if an attack can be triggered this frame; updates internal cooldown.
-    bool tryAttack(const glm::vec2& selfPos, const glm::vec2& targetPos, float dt);
-    bool isOnCooldown() const { return m_cooldownTimer > 0.0f; }
+    void update(float dt);
+    [[nodiscard]] bool tryAttack(const glm::vec2& selfPos, const glm::vec2& targetPos);
+    void resetCooldown() noexcept { m_cooldownTimer = 0.0f; }
+
+    [[nodiscard]] bool isOnCooldown() const noexcept { return m_cooldownTimer > 0.0f; }
+    [[nodiscard]] float remainingCooldown() const noexcept { return m_cooldownTimer; }
+    [[nodiscard]] float attackRange() const noexcept { return m_attackRange; }
+    [[nodiscard]] float cooldown() const noexcept { return m_cooldown; }
 
 private:
     float m_attackRange{50.0f};

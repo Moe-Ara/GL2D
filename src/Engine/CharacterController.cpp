@@ -35,6 +35,12 @@ void CharacterController::update(Entity &entity, double deltaTime) {
     RigidBody* body = rbComp ? rbComp->body() : nullptr;
 
     Intent intent = gatherIntent(entity, deltaTime);
+    const float dtf = static_cast<float>(deltaTime);
+    if (intent.jumpPressed) {
+        m_jumpBufferRemaining = m_jumpBufferTime;
+    } else {
+        m_jumpBufferRemaining = std::max(0.0f, m_jumpBufferRemaining - dtf);
+    }
     ensureLedgeSensor(entity);
     if (m_isHanging) {
         if (handleHangInput(intent, transformComp, body, sprite)) {
@@ -48,7 +54,6 @@ void CharacterController::update(Entity &entity, double deltaTime) {
         m_groundInitialized = true;
     }
 
-    const float dtf = static_cast<float>(deltaTime);
     const float desiredDir = std::clamp(intent.moveAxis, -1.0f, 1.0f);
     const float axisMag = std::abs(desiredDir);
     if (axisMag > kAxisEpsilon) {
@@ -86,7 +91,8 @@ void CharacterController::update(Entity &entity, double deltaTime) {
     m_lastMoveMode = currentMode;
 
     // Smoothly approach target velocity using acceleration as the rate.
-    const float accelStep = m_acceleration * dtf;
+    const float horizontalRate = axisMag > kAxisEpsilon ? m_acceleration : m_deceleration;
+    const float accelStep = horizontalRate * dtf;
     if (std::abs(targetVelX - m_velocity.x) <= accelStep) {
         m_velocity.x = targetVelX;
     } else {
@@ -111,6 +117,14 @@ void CharacterController::update(Entity &entity, double deltaTime) {
         m_wallNormal = glm::vec2{0.0f};
     }
     const bool groundedBySensor = sensor && sensor->isGrounded();
+    // Without a sensor, fall back to last step's resolved grounded state so
+    // configurations relying on velocity/ground-clamp detection can still jump.
+    const bool groundedForCoyote = sensor ? groundedBySensor : m_isGrounded;
+    if (groundedForCoyote) {
+        m_coyoteRemaining = m_coyoteTime;
+    } else {
+        m_coyoteRemaining = std::max(0.0f, m_coyoteRemaining - dtf);
+    }
     const bool platformContact = sensor && sensor->hasPlatformContact();
     glm::vec2 platformVelocity{0.0f};
     if (platformContact) {
@@ -166,6 +180,8 @@ void CharacterController::update(Entity &entity, double deltaTime) {
     };
 
     if (body) {
+        constexpr float defaultGravity = PhysicsUnits::toUnits(9.81f);
+        body->setGravityScale(defaultGravity > 0.0f ? m_gravity / defaultGravity : 1.0f);
         auto vel = body->getVelocity();
         vel.x = m_velocity.x;
         if (platformContact && glm::length(platformDelta) > kAxisEpsilon) {
@@ -173,31 +189,45 @@ void CharacterController::update(Entity &entity, double deltaTime) {
         }
 
         const float groundedVelEps = PhysicsUnits::toUnits(0.015f);
+        // A jump apex also passes a single near-zero velocity test; a resting
+        // body stays near zero across steps, so require two quiet steps.
+        const bool velocityQuiet = std::abs(vel.y) <= groundedVelEps;
+        const bool groundedByVel = velocityQuiet && m_prevBodyVelocityQuiet;
+        m_prevBodyVelocityQuiet = velocityQuiet;
         if (m_isClimbing) {
             m_isGrounded = false;
             vel.y = adjustClimbVelocity(vel.y);
         } else {
-            m_isGrounded = groundedBySensor || (std::abs(vel.y) <= groundedVelEps);
-            if (intent.jumpPressed && m_isGrounded) {
+            m_isGrounded = sensor ? groundedBySensor : groundedByVel;
+            if (m_jumpBufferRemaining > 0.0f && m_coyoteRemaining > 0.0f) {
                 vel.y = m_jumpImpulse;
                 m_isGrounded = false;
-            }
-            if (!m_isGrounded) {
-                vel.y -= m_gravity * dtf;
+                m_jumpBufferRemaining = 0.0f;
+                m_coyoteRemaining = 0.0f;
+            } else if (intent.jumpReleased && vel.y > 0.0f) {
+                vel.y *= m_jumpCutMultiplier;
             }
         }
 
         body->setVelocity(vel);
     } else {
-        const bool groundedByVel = std::abs(m_velocity.y) <= PhysicsUnits::toUnits(0.015f);
+        // Near-zero vertical velocity alone is ambiguous (a jump apex also
+        // qualifies); require the body to actually rest at the ground plane.
+        const bool groundedByVel =
+            std::abs(m_velocity.y) <= PhysicsUnits::toUnits(0.015f) &&
+            transform.Position.y <= m_groundLevel + PhysicsUnits::toUnits(0.01f);
         if (m_isClimbing) {
             m_isGrounded = false;
             m_velocity.y = adjustClimbVelocity(m_velocity.y);
         } else {
             m_isGrounded = groundedBySensor || groundedByVel;
-            if (intent.jumpPressed && m_isGrounded) {
+            if (m_jumpBufferRemaining > 0.0f && m_coyoteRemaining > 0.0f) {
                 m_velocity.y = m_jumpImpulse;
                 m_isGrounded = false;
+                m_jumpBufferRemaining = 0.0f;
+                m_coyoteRemaining = 0.0f;
+            } else if (intent.jumpReleased && m_velocity.y > 0.0f) {
+                m_velocity.y *= m_jumpCutMultiplier;
             }
 
             if (!m_isGrounded) {
@@ -227,13 +257,13 @@ void CharacterController::update(Entity &entity, double deltaTime) {
 void CharacterController::applyFeeling(const FeelingsSystem::FeelingSnapshot &snapshot) {
     resetFeelingOverrides();
     const float speedMul = snapshot.entitySpeedMul.value_or(1.0f);
-    const float animMul = snapshot.animationSpeedMul.value_or(1.0f);
+    const float accelerationMul =
+        snapshot.accelerationSpeedMul.value_or(speedMul);
 
     m_moveSpeed = m_baseMoveSpeed * speedMul;
-    m_acceleration = m_baseAcceleration * speedMul;
-    m_deceleration = m_baseDeceleration * speedMul;
+    m_acceleration = m_baseAcceleration * accelerationMul;
+    m_deceleration = m_baseDeceleration * accelerationMul;
     m_jumpImpulse = m_baseJumpImpulse * speedMul;
-    m_gravity = m_baseGravity * animMul;
 }
 
 void CharacterController::resetFeelingOverrides() {
@@ -249,6 +279,9 @@ void CharacterController::configureMovement(const MovementConfig &config) {
     m_baseAcceleration = config.acceleration;
     m_baseDeceleration = config.deceleration;
     m_baseJumpImpulse = config.jumpImpulse;
+    m_coyoteTime = std::max(0.0f, config.coyoteTime);
+    m_jumpBufferTime = std::max(0.0f, config.jumpBufferTime);
+    m_jumpCutMultiplier = std::clamp(config.jumpCutMultiplier, 0.0f, 1.0f);
     m_baseGravity = config.gravity;
     m_walkSpeedMultiplier = config.walkSpeedMultiplier;
     m_walkAxisThreshold = config.walkAxisThreshold;

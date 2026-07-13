@@ -6,8 +6,10 @@
 #define GL2D_TRIGGERSYSTEM_HPP
 
 #include "GameObjects/Entity.hpp"
+#include "Physics/BroadphaseBVH.hpp"
 
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -49,10 +51,18 @@ private:
 
     static PairKey makeKey(uint64_t a, uint64_t b);
     void handleEnter(const ColliderEntry& a, const ColliderEntry& b, bool aWasTriggered, bool bWasTriggered);
+    void handleStay(const ColliderEntry& a, const ColliderEntry& b);
     void handleExit(const ColliderEntry& a, const ColliderEntry& b);
-    static bool overlapsAABB(const ACollider& a, const ACollider& b);
 
     std::unordered_set<PairKey, PairKeyHash> m_activeOverlaps{};
+    // Per-update scratch, kept as members so steady-state updates do not
+    // allocate.
+    std::vector<ColliderEntry> m_entryScratch;
+    std::vector<BroadphaseBVH::Entry> m_broadphaseScratch;
+    std::vector<BroadphaseBVH::Pair> m_pairScratch;
+    std::unordered_map<uint64_t, ColliderEntry*> m_entriesById;
+    std::unordered_set<PairKey, PairKeyHash> m_overlapScratch;
+    BroadphaseBVH m_broadphase;
 };
 
 #endif //GL2D_TRIGGERSYSTEM_HPP

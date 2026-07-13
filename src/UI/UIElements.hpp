@@ -45,8 +45,14 @@ struct UITransform {
     glm::vec2 anchor{0.0f};
     glm::vec2 pivot{0.0f};
 
+    // Root transforms use the canvas as their reference. Child transforms use
+    // their parent's rectangle, so anchors remain local throughout the tree.
     [[nodiscard]] glm::vec2 worldPosition(const glm::vec2& canvasSize) const;
+    [[nodiscard]] glm::vec2 worldPosition(const glm::vec2& referenceSize,
+                                          const glm::vec2& referenceOrigin) const;
     [[nodiscard]] glm::vec4 bounds(const glm::vec2& canvasSize) const;
+    [[nodiscard]] glm::vec4 bounds(const glm::vec2& referenceSize,
+                                   const glm::vec2& referenceOrigin) const;
     [[nodiscard]] bool contains(const glm::vec2& point, const glm::vec2& canvasSize) const;
 };
 
@@ -65,7 +71,7 @@ struct UIEffect {
 struct UIRenderCommand {
     glm::vec4 rect{}; // x0, y0, x1, y1 in screen space
     glm::vec4 color{1.0f};
-    GameObjects::Texture* texture{nullptr}; // optional, non-owning
+    std::shared_ptr<GameObjects::Texture> texture{};
     float zIndex{0.0f};
     // Optional text rendering (uses color above). If non-empty, texture is ignored.
     std::string text{};
@@ -77,7 +83,7 @@ public:
     UIElement(std::string id,
               UITransform transform = {},
               UIEffect effect = {},
-              GameObjects::Texture* texture = nullptr,
+              std::shared_ptr<GameObjects::Texture> texture = {},
               float zIndex = 1000.0f);
     virtual ~UIElement() = default;
 
@@ -91,7 +97,7 @@ public:
     bool isVisible() const { return m_visible; }
     bool isEnabled() const { return m_enabled; }
     float zIndex() const { return m_zIndex; }
-    void setZIndex(float z) { m_zIndex = z; }
+    void setZIndex(float z);
 
     UITransform& transform() { return m_transform; }
     const UITransform& transform() const { return m_transform; }
@@ -100,11 +106,12 @@ public:
 
     void setVisible(bool visible) { m_visible = visible; }
     void setEnabled(bool enabled);
-    void setTexture(GameObjects::Texture* texture) { m_texture = texture; }
+    void setTexture(std::shared_ptr<GameObjects::Texture> texture) {
+        m_texture = std::move(texture);
+    }
 
     void addChild(const std::shared_ptr<UIElement>& child);
     const std::vector<std::shared_ptr<UIElement>>& children() const { return m_children; }
-    UIElement* parent() const { return m_parent; }
 
     [[nodiscard]] bool contains(const glm::vec2& point, const glm::vec2& canvasSize) const;
     [[nodiscard]] glm::vec4 bounds(const glm::vec2& canvasSize) const;
@@ -113,8 +120,12 @@ public:
     void collectRenderTree(std::vector<UIRenderCommand>& out, const glm::vec2& canvasSize) const;
 
 protected:
-    virtual void updateSelf(float dt, const UIPointerState& pointer, const glm::vec2& canvasSize);
-    virtual void buildRenderCommands(std::vector<UIRenderCommand>& out, const glm::vec2& canvasSize) const;
+    virtual void updateSelf(float dt, const UIPointerState& pointer, const glm::vec4& resolvedBounds);
+    virtual void buildRenderCommands(std::vector<UIRenderCommand>& out,
+                                     const glm::vec4& resolvedBounds) const;
+
+    [[nodiscard]] static bool containsPoint(const glm::vec2& point,
+                                            const glm::vec4& resolvedBounds);
 
     void applyEffect(float dt);
     void setState(UIState newState) { m_state = newState; }
@@ -122,15 +133,27 @@ protected:
     std::string m_id;
     UITransform m_transform{};
     UIEffect m_effect{};
-    GameObjects::Texture* m_texture{nullptr};
+    std::shared_ptr<GameObjects::Texture> m_texture{};
     UIState m_state{UIState::Idle};
     bool m_visible{true};
     bool m_enabled{true};
     float m_zIndex{1000.0f};
 
 private:
-    UIElement* m_parent{nullptr};
+    struct AttachmentLifetime {};
+
+    void updateTree(float dt,
+                    const UIPointerState& pointer,
+                    const glm::vec2& referenceOrigin,
+                    const glm::vec2& referenceSize);
+    void collectRenderTree(std::vector<UIRenderCommand>& out,
+                           const glm::vec2& referenceOrigin,
+                           const glm::vec2& referenceSize) const;
+
     std::vector<std::shared_ptr<UIElement>> m_children;
+    std::shared_ptr<AttachmentLifetime> m_attachmentLifetime{
+        std::make_shared<AttachmentLifetime>()};
+    std::weak_ptr<AttachmentLifetime> m_parentLifetime;
 };
 
 template<typename... Args>
@@ -142,7 +165,7 @@ public:
            UITransform transform = {},
            Callback cb = nullptr,
            ButtonMode mode = ButtonMode::Click,
-           GameObjects::Texture* texture = nullptr,
+           std::shared_ptr<GameObjects::Texture> texture = {},
            UIEffect effect = {})
         : UIElement(std::move(id), transform, effect, texture),
           m_callback(std::move(cb)),
@@ -152,13 +175,13 @@ public:
     void setMode(ButtonMode mode) { m_mode = mode; }
     void setDefaultArgs(Args... args) { m_boundArgs = std::make_tuple(std::forward<Args>(args)...); }
 
-    void updateSelf(float dt, const UIPointerState& pointer, const glm::vec2& canvasSize) override {
+    void updateSelf(float, const UIPointerState& pointer, const glm::vec4& resolvedBounds) override {
         if (!m_enabled) {
             setState(UIState::Disabled);
             return;
         }
 
-        const bool hovering = contains(pointer.position, canvasSize);
+        const bool hovering = containsPoint(pointer.position, resolvedBounds);
         const bool pressedInside = hovering && pointer.pressed;
         const bool releasedInside = hovering && pointer.released;
 
@@ -200,14 +223,15 @@ public:
     explicit UICheckbox(std::string id,
                         UITransform transform = {},
                         UIEffect effect = {},
-                        GameObjects::Texture* texture = nullptr);
+                        std::shared_ptr<GameObjects::Texture> texture = {});
 
     std::function<void(bool)> onToggle;
     bool checked{false};
 
 protected:
-    void updateSelf(float dt, const UIPointerState& pointer, const glm::vec2& canvasSize) override;
-    void buildRenderCommands(std::vector<UIRenderCommand>& out, const glm::vec2& canvasSize) const override;
+    void updateSelf(float dt, const UIPointerState& pointer, const glm::vec4& resolvedBounds) override;
+    void buildRenderCommands(std::vector<UIRenderCommand>& out,
+                             const glm::vec4& resolvedBounds) const override;
 
 private:
     float m_checkInset{4.0f};
@@ -219,7 +243,7 @@ public:
     explicit UIBar(std::string id,
                    UITransform transform = {},
                    UIEffect effect = {},
-                   GameObjects::Texture* texture = nullptr);
+                   std::shared_ptr<GameObjects::Texture> texture = {});
 
     void setValue(float v);
     float value() const { return m_value; }
@@ -228,7 +252,8 @@ public:
     glm::vec4 fill{0.25f, 0.65f, 1.0f, 0.95f};
 
 protected:
-    void buildRenderCommands(std::vector<UIRenderCommand>& out, const glm::vec2& canvasSize) const override;
+    void buildRenderCommands(std::vector<UIRenderCommand>& out,
+                             const glm::vec4& resolvedBounds) const override;
 
 private:
     float m_value{0.0f};
@@ -238,13 +263,14 @@ class UIIcon : public UIElement {
 public:
     explicit UIIcon(std::string id,
                     UITransform transform = {},
-                    GameObjects::Texture* texture = nullptr,
+                    std::shared_ptr<GameObjects::Texture> texture = {},
                     UIEffect effect = {});
 
     glm::vec4 tint{1.0f};
 
 protected:
-    void buildRenderCommands(std::vector<UIRenderCommand>& out, const glm::vec2& canvasSize) const override;
+    void buildRenderCommands(std::vector<UIRenderCommand>& out,
+                             const glm::vec4& resolvedBounds) const override;
 };
 
 class UIItem : public UIElement {
@@ -252,7 +278,7 @@ public:
     explicit UIItem(std::string id,
                     UITransform transform = {},
                     UIEffect effect = {},
-                    GameObjects::Texture* texture = nullptr);
+                    std::shared_ptr<GameObjects::Texture> texture = {});
 
     std::string label;
     bool selectable{true};
@@ -260,8 +286,9 @@ public:
     std::function<void()> onActivate;
 
 protected:
-    void updateSelf(float dt, const UIPointerState& pointer, const glm::vec2& canvasSize) override;
-    void buildRenderCommands(std::vector<UIRenderCommand>& out, const glm::vec2& canvasSize) const override;
+    void updateSelf(float dt, const UIPointerState& pointer, const glm::vec4& resolvedBounds) override;
+    void buildRenderCommands(std::vector<UIRenderCommand>& out,
+                             const glm::vec4& resolvedBounds) const override;
 };
 
 class UIMenu : public UIElement {
@@ -275,11 +302,11 @@ public:
                     float spacing = 6.0f);
 
     void relayout();
-    void setSpacing(float spacing) { m_spacing = spacing; }
+    void setSpacing(float spacing);
     void setDirection(LayoutDirection dir) { m_direction = dir; }
 
 protected:
-    void updateSelf(float dt, const UIPointerState& pointer, const glm::vec2& canvasSize) override;
+    void updateSelf(float dt, const UIPointerState& pointer, const glm::vec4& resolvedBounds) override;
 
 private:
     LayoutDirection m_direction;

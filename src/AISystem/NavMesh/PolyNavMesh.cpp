@@ -4,15 +4,28 @@
 #include <cmath>
 #include <limits>
 #include <queue>
-#include <unordered_map>
-#include <unordered_set>
+#include <stdexcept>
 
-#include <GL/glew.h>
+#include <glm/geometric.hpp>
 
 #include "Physics/Collision/AABB.hpp"
 
 namespace {
 constexpr float kEps = 1e-4f;
+
+bool isFinite(const glm::vec2& value) {
+    return std::isfinite(value.x) && std::isfinite(value.y);
+}
+
+float signedArea(const glm::vec2& apex, const glm::vec2& a, const glm::vec2& b) {
+    return (a.x - apex.x) * (b.y - apex.y) -
+           (a.y - apex.y) * (b.x - apex.x);
+}
+
+bool nearlyEqual(const glm::vec2& a, const glm::vec2& b) {
+    const glm::vec2 delta = a - b;
+    return glm::dot(delta, delta) <= kEps * kEps;
+}
 }
 
 void PolyNavMesh::buildFromRaster(const NavRaster& raster) {
@@ -22,19 +35,12 @@ void PolyNavMesh::buildFromRaster(const NavRaster& raster) {
     buildAdjacencies();
 }
 
-void PolyNavMesh::rebuildRegion(const NavRaster& raster, const NavAABB& /*region*/) {
-    buildFromRaster(raster);
-}
-
 void PolyNavMesh::clear() {
     m_polys.clear();
 }
 
-const std::vector<NavPoly>& PolyNavMesh::getPolys() const {
-    return m_polys;
-}
-
-NavPath PolyNavMesh::findPath(const glm::vec2& start, const glm::vec2& end) {
+NavPath PolyNavMesh::findPath(const glm::vec2& start, const glm::vec2& end) const {
+    if (!isFinite(start) || !isFinite(end)) return {};
     const int startPoly = findPolyContainingPoint(start);
     const int endPoly = findPolyContainingPoint(end);
     if (startPoly < 0 || endPoly < 0) {
@@ -47,37 +53,16 @@ NavPath PolyNavMesh::findPath(const glm::vec2& start, const glm::vec2& end) {
     return buildPathWithFunnel(polyPath, start, end);
 }
 
-void PolyNavMesh::debugDraw() {
-    glUseProgram(0);
-    glDisable(GL_TEXTURE_2D);
-    glLineWidth(1.0f);
-
-    glColor3f(0.0f, 1.0f, 0.0f);
-    for (const auto& poly : m_polys) {
-        glBegin(GL_LINE_LOOP);
-        for (const auto& v : poly.vertices) {
-            glVertex2f(v.x, v.y);
-        }
-        glEnd();
-    }
-
-    glColor3f(0.0f, 0.5f, 1.0f);
-    glBegin(GL_LINES);
-    for (const auto& poly : m_polys) {
-        for (const auto& portal : poly.portals) {
-            glVertex2f(portal.left.x, portal.left.y);
-            glVertex2f(portal.right.x, portal.right.y);
-        }
-    }
-    glEnd();
-}
-
 std::vector<NavRegion> PolyNavMesh::buildRegions(const NavRaster& raster) const {
     std::vector<NavRegion> regions;
-    const int w = raster.getm_width();
-    const int h = raster.getm_height();
-    std::vector<uint8_t> visited(static_cast<size_t>(w * h), 0);
-    auto idx = [w](int x, int y) { return static_cast<size_t>(y * w + x); };
+    const int w = raster.width();
+    const int h = raster.height();
+    std::vector<std::uint8_t> visited(static_cast<std::size_t>(w) *
+                                      static_cast<std::size_t>(h), 0);
+    auto idx = [w](int x, int y) {
+        return static_cast<std::size_t>(y) * static_cast<std::size_t>(w) +
+               static_cast<std::size_t>(x);
+    };
 
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
@@ -122,8 +107,8 @@ std::vector<NavRegion> PolyNavMesh::buildRegions(const NavRaster& raster) const 
 void PolyNavMesh::buildPolygonsFromRegion(const NavRaster& raster, const std::vector<NavRegion>& regions) {
     m_polys.clear();
     m_polys.reserve(regions.size());
-    const float cellSize = raster.getm_cellsize();
-    const glm::vec2 origin = raster.getm_origin();
+    const float cellSize = raster.cellSize();
+    const glm::vec2 origin = raster.origin();
 
     for (size_t i = 0; i < regions.size(); ++i) {
         const auto& r = regions[i];
@@ -157,8 +142,18 @@ void PolyNavMesh::buildAdjacencies() {
                 const int nj = static_cast<int>(i);
                 m_polys[i].neighbors.push_back(ni);
                 m_polys[j].neighbors.push_back(nj);
-                m_polys[i].portals.push_back(NavPortal{ni, a0, a1});
-                m_polys[j].portals.push_back(NavPortal{nj, a0, a1});
+
+                const glm::vec2 centerI = computePolyCenter(m_polys[i]);
+                const glm::vec2 centerJ = computePolyCenter(m_polys[j]);
+                // The funnel implementation consumes clockwise portal winding
+                // (its "left" endpoint is the lower signed-area endpoint in
+                // GL2D's x/y coordinate system).
+                const bool a0IsLeftFromI = signedArea(centerI, centerJ, a0) <=
+                                           signedArea(centerI, centerJ, a1);
+                m_polys[i].portals.push_back(
+                    NavPortal{ni, a0IsLeftFromI ? a0 : a1, a0IsLeftFromI ? a1 : a0});
+                m_polys[j].portals.push_back(
+                    NavPortal{nj, a0IsLeftFromI ? a1 : a0, a0IsLeftFromI ? a0 : a1});
             }
         }
     }
@@ -174,12 +169,6 @@ int PolyNavMesh::findPolyContainingPoint(const glm::vec2& point) const {
 }
 
 std::vector<int> PolyNavMesh::findPathPolys(int startPolyIdx, int endPolyIdx) const {
-    struct Node {
-        int idx;
-        int parent;
-        float g;
-        float f;
-    };
     auto heuristic = [&](int a, int b) {
         const glm::vec2 ca = computePolyCenter(m_polys[a]);
         const glm::vec2 cb = computePolyCenter(m_polys[b]);
@@ -189,60 +178,45 @@ std::vector<int> PolyNavMesh::findPathPolys(int startPolyIdx, int endPolyIdx) co
     std::priority_queue<std::pair<float, int>,
                         std::vector<std::pair<float, int>>,
                         std::greater<>> open;
-    std::unordered_map<int, Node> nodes;
-    std::unordered_set<int> closed;
+    std::vector<float> gScores(m_polys.size(), std::numeric_limits<float>::infinity());
+    std::vector<int> parents(m_polys.size(), -1);
+    std::vector<std::uint8_t> closed(m_polys.size(), 0);
 
-    Node start{startPolyIdx, -1, 0.0f, heuristic(startPolyIdx, endPolyIdx)};
-    nodes[startPolyIdx] = start;
-    open.push({start.f, startPolyIdx});
+    gScores[static_cast<std::size_t>(startPolyIdx)] = 0.0f;
+    open.push({heuristic(startPolyIdx, endPolyIdx), startPolyIdx});
+    bool reachedEnd = false;
 
     while (!open.empty()) {
         const auto [_, currentIdx] = open.top();
         open.pop();
-        if (closed.find(currentIdx) != closed.end()) continue;
+        const auto current = static_cast<std::size_t>(currentIdx);
+        if (closed[current]) continue;
         if (currentIdx == endPolyIdx) {
+            reachedEnd = true;
             break;
         }
-        closed.insert(currentIdx);
+        closed[current] = 1;
 
-        const auto& current = nodes[currentIdx];
         for (int nei : m_polys[currentIdx].neighbors) {
-            if (closed.find(nei) != closed.end()) continue;
-            const float tentativeG = current.g + heuristic(currentIdx, nei);
-            auto it = nodes.find(nei);
-            if (it == nodes.end() || tentativeG < it->second.g - kEps) {
-                Node n{};
-                n.idx = nei;
-                n.parent = currentIdx;
-                n.g = tentativeG;
-                n.f = tentativeG + heuristic(nei, endPolyIdx);
-                nodes[nei] = n;
-                open.push({n.f, nei});
+            const auto neighbor = static_cast<std::size_t>(nei);
+            if (closed[neighbor]) continue;
+            const float tentativeG = gScores[current] + heuristic(currentIdx, nei);
+            if (tentativeG < gScores[neighbor] - kEps) {
+                parents[neighbor] = currentIdx;
+                gScores[neighbor] = tentativeG;
+                open.push({tentativeG + heuristic(nei, endPolyIdx), nei});
             }
         }
     }
 
     std::vector<int> path;
-    auto itEnd = nodes.find(endPolyIdx);
-    if (itEnd == nodes.end()) {
-        return path;
-    }
+    if (!reachedEnd) return path;
     int cur = endPolyIdx;
     while (cur != -1) {
         path.push_back(cur);
-        cur = nodes[cur].parent;
+        cur = parents[static_cast<std::size_t>(cur)];
     }
     std::reverse(path.begin(), path.end());
-    return path;
-}
-
-NavPath PolyNavMesh::buildPathFromPolyCenters(const std::vector<int>& polyPath) const {
-    NavPath path;
-    path.points.reserve(polyPath.size());
-    for (int idx : polyPath) {
-        if (idx < 0 || idx >= static_cast<int>(m_polys.size())) continue;
-        path.points.push_back(computePolyCenter(m_polys[idx]));
-    }
     return path;
 }
 
@@ -263,23 +237,45 @@ bool PolyNavMesh::sharesEdge(const NavPoly& a, const NavPoly& b, float epsilon, 
     const glm::vec2 bMin = bBox.getMin();
     const glm::vec2 bMax = bBox.getMax();
 
-    // Check vertical adjacency (right of A to left of B or vice versa)
-    if (std::abs(aMax.x - bMin.x) <= epsilon || std::abs(bMax.x - aMin.x) <= epsilon) {
+    // Check vertical adjacency (right of A to left of B or vice versa).
+    if (std::abs(aMax.x - bMin.x) <= epsilon) {
         const float y0 = std::max(aMin.y, bMin.y);
         const float y1 = std::min(aMax.y, bMax.y);
         if (y1 - y0 > epsilon) {
-            outA = glm::vec2{(aMax.x + bMin.x) * 0.5f, y0};
-            outB = glm::vec2{(aMax.x + bMin.x) * 0.5f, y1};
+            const float boundary = (aMax.x + bMin.x) * 0.5f;
+            outA = glm::vec2{boundary, y0};
+            outB = glm::vec2{boundary, y1};
             return true;
         }
     }
-    // Check horizontal adjacency (top of A to bottom of B or vice versa)
-    if (std::abs(aMax.y - bMin.y) <= epsilon || std::abs(bMax.y - aMin.y) <= epsilon) {
+    if (std::abs(bMax.x - aMin.x) <= epsilon) {
+        const float y0 = std::max(aMin.y, bMin.y);
+        const float y1 = std::min(aMax.y, bMax.y);
+        if (y1 - y0 > epsilon) {
+            const float boundary = (bMax.x + aMin.x) * 0.5f;
+            outA = glm::vec2{boundary, y0};
+            outB = glm::vec2{boundary, y1};
+            return true;
+        }
+    }
+    // Check horizontal adjacency (top of A to bottom of B or vice versa).
+    if (std::abs(aMax.y - bMin.y) <= epsilon) {
         const float x0 = std::max(aMin.x, bMin.x);
         const float x1 = std::min(aMax.x, bMax.x);
         if (x1 - x0 > epsilon) {
-            outA = glm::vec2{x0, (aMax.y + bMin.y) * 0.5f};
-            outB = glm::vec2{x1, (aMax.y + bMin.y) * 0.5f};
+            const float boundary = (aMax.y + bMin.y) * 0.5f;
+            outA = glm::vec2{x0, boundary};
+            outB = glm::vec2{x1, boundary};
+            return true;
+        }
+    }
+    if (std::abs(bMax.y - aMin.y) <= epsilon) {
+        const float x0 = std::max(aMin.x, bMin.x);
+        const float x1 = std::min(aMax.x, bMax.x);
+        if (x1 - x0 > epsilon) {
+            const float boundary = (bMax.y + aMin.y) * 0.5f;
+            outA = glm::vec2{x0, boundary};
+            outB = glm::vec2{x1, boundary};
             return true;
         }
     }
@@ -298,17 +294,14 @@ bool PolyNavMesh::getPortal(int aIdx, int bIdx, glm::vec2& outLeft, glm::vec2& o
     return false;
 }
 
-static float cross2(const glm::vec2& a, const glm::vec2& b, const glm::vec2& c) {
-    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-}
-
 NavPath PolyNavMesh::buildPathWithFunnel(const std::vector<int>& polyPath,
                                          const glm::vec2& start,
                                          const glm::vec2& end) const {
     NavPath path;
     if (polyPath.empty()) return path;
     if (polyPath.size() == 1) {
-        path.points = {start, end};
+        path.points = nearlyEqual(start, end) ? std::vector<glm::vec2>{start}
+                                              : std::vector<glm::vec2>{start, end};
         return path;
     }
 
@@ -320,14 +313,9 @@ NavPath PolyNavMesh::buildPathWithFunnel(const std::vector<int>& polyPath,
     for (size_t i = 0; i + 1 < polyPath.size(); ++i) {
         glm::vec2 p0, p1;
         if (!getPortal(polyPath[i], polyPath[i + 1], p0, p1)) {
-            p0 = computePolyCenter(m_polys[polyPath[i]]);
-            p1 = computePolyCenter(m_polys[polyPath[i + 1]]);
+            throw std::logic_error("Navmesh path corridor is missing a shared portal");
         }
-        if (cross2(start, p0, p1) > 0.0f) {
-            portals.push_back({p0, p1});
-        } else {
-            portals.push_back({p1, p0});
-        }
+        portals.push_back({p0, p1});
     }
     portals.push_back({end, end});
 
@@ -344,11 +332,13 @@ NavPath PolyNavMesh::buildPathWithFunnel(const std::vector<int>& polyPath,
         const glm::vec2 newRight = portals[i].right;
 
         // Tighten right
-        if (cross2(apex, right, newRight) <= 0.0f) {
-            if (cross2(apex, left, newRight) < 0.0f) {
-                // Advance apex to left
+        if (signedArea(apex, right, newRight) <= 0.0f) {
+            if (nearlyEqual(apex, right) || signedArea(apex, left, newRight) > 0.0f) {
+                right = newRight;
+                rightIndex = i;
+            } else {
                 apex = left;
-                path.points.push_back(apex);
+                if (!nearlyEqual(path.points.back(), apex)) path.points.push_back(apex);
                 apexIndex = leftIndex;
                 left = apex;
                 right = apex;
@@ -356,18 +346,17 @@ NavPath PolyNavMesh::buildPathWithFunnel(const std::vector<int>& polyPath,
                 rightIndex = apexIndex;
                 i = apexIndex;
                 continue;
-            } else {
-                right = newRight;
-                rightIndex = i;
             }
         }
 
         // Tighten left
-        if (cross2(apex, left, newLeft) >= 0.0f) {
-            if (cross2(apex, right, newLeft) > 0.0f) {
-                // Advance apex to right
+        if (signedArea(apex, left, newLeft) >= 0.0f) {
+            if (nearlyEqual(apex, left) || signedArea(apex, right, newLeft) < 0.0f) {
+                left = newLeft;
+                leftIndex = i;
+            } else {
                 apex = right;
-                path.points.push_back(apex);
+                if (!nearlyEqual(path.points.back(), apex)) path.points.push_back(apex);
                 apexIndex = rightIndex;
                 left = apex;
                 right = apex;
@@ -375,9 +364,6 @@ NavPath PolyNavMesh::buildPathWithFunnel(const std::vector<int>& polyPath,
                 rightIndex = apexIndex;
                 i = apexIndex;
                 continue;
-            } else {
-                left = newLeft;
-                leftIndex = i;
             }
         }
     }

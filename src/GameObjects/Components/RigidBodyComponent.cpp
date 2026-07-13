@@ -12,17 +12,14 @@ RigidBodyComponent::RigidBodyComponent(std::unique_ptr<RigidBody> rigidBody)
 
 void RigidBodyComponent::setBody(std::unique_ptr<RigidBody> body) {
     m_body = std::move(body);
-    m_bound = false;
 }
 
 void RigidBodyComponent::ensureBound(Entity &owner) {
-    if (!m_bound) {
-        bindOwner(owner);
-    }
+    bindOwner(owner);
 }
 
 void RigidBodyComponent::bindOwner(Entity &owner) {
-    if (!m_body || m_bound) {
+    if (!m_body) {
         return;
     }
 
@@ -34,10 +31,9 @@ void RigidBodyComponent::bindOwner(Entity &owner) {
         colliderComp->ensureCollider(owner);
         m_body->setCollider(colliderComp->collider());
     }
-    m_bound = true;
 }
 
-void RigidBodyComponent::update(Entity &owner, double dt) {
+void RigidBodyComponent::update(Entity &owner, double /*dt*/) {
     if (!m_body) {
         return;
     }

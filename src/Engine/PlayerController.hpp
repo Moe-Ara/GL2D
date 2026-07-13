@@ -2,6 +2,7 @@
 #define PLAYER_CONTROLLER_HPP
 
 #include <glm/vec2.hpp>
+#include <cstdint>
 
 #include "GameObjects/Entity.hpp"
 #include "CharacterController.hpp"
@@ -24,12 +25,14 @@ private:
     bool m_moveLeft{false};
     bool m_moveRight{false};
     bool m_jumpQueued{false};
+    bool m_jumpReleasedQueued{false};
     float m_axisX{0.0f};
     bool m_axisUpdated{false};
     bool m_moveUp{false};
     bool m_moveDown{false};
     float m_climbAxis{0.0f};
     bool m_climbAxisUpdated{false};
+    std::uint64_t m_lastActionFrame{0};
 };
 
 #endif

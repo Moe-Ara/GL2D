@@ -36,7 +36,6 @@ private:
     void bindOwner(Entity &owner);
 
     std::unique_ptr<RigidBody> m_body{};
-    bool m_bound{false};
 };
 
 

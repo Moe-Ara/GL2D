@@ -16,10 +16,14 @@ namespace {
 }
 
 InputService *InputService::s_activeService = nullptr;
+std::unordered_map<GLFWwindow*, InputService*> InputService::s_windowServices{};
 
 InputService::InputService() = default;
 
 InputService::~InputService() {
+    if (m_window) {
+        s_windowServices.erase(m_window);
+    }
     if (s_activeService == this) {
         s_activeService = nullptr;
     }
@@ -31,7 +35,7 @@ void InputService::initialize(GLFWwindow *window) {
     }
     m_window = window;
     s_activeService = this;
-    glfwSetWindowUserPointer(window, this);
+    s_windowServices[window] = this;
 
     registerBuiltinDevices();
 
@@ -70,6 +74,7 @@ const std::vector<InputEvent> &InputService::pollEvents() {
         m_eventBuffer.clear();
     }
     resolveActionEvents();
+    ++m_actionFrame;
     return m_eventBuffer;
 }
 
@@ -215,7 +220,8 @@ void InputService::enqueueEvent(InputEvent event) {
 }
 
 InputService *InputService::getServiceFromWindow(GLFWwindow *window) {
-    return static_cast<InputService *>(glfwGetWindowUserPointer(window));
+    const auto it = s_windowServices.find(window);
+    return it == s_windowServices.end() ? nullptr : it->second;
 }
 
 void InputService::keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
@@ -224,7 +230,7 @@ void InputService::keyCallback(GLFWwindow *window, int key, int scancode, int ac
     auto *service = getServiceFromWindow(window);
     if (!service) return;
 
-    if (action != GLFW_PRESS && action != GLFW_RELEASE && action != GLFW_REPEAT) {
+    if (action != GLFW_PRESS && action != GLFW_RELEASE) {
         return;
     }
 

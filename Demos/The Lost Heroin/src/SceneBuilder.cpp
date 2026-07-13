@@ -7,7 +7,6 @@
 #include "Player.hpp"
 #include "Engine/Scene.hpp"
 #include "GameObjects/Sprite.hpp"
-#include "GameObjects/Components/FeelingsComponent.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Components/SpriteComponent.hpp"
 #include "GameObjects/Components/RigidBodyComponent.hpp"
@@ -15,12 +14,16 @@
 #include "GameObjects/Components/LedgeComponent.hpp"
 #include "InputSystem/InputService.hpp"
 #include "Physics/RigidBody.hpp"
-#include "FeelingsSystem/FeelingSnapshot.hpp"
 #include "RenderingSystem/RenderLayers.hpp"
 #include "Managers/TextureManager.hpp"
 
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
+
+#ifndef DEMO_ASSETS_DIR
+#define DEMO_ASSETS_DIR "assets"
+#endif
 
 namespace {
     glm::vec2 calculateCenteredPosition(const glm::vec2& worldSize,
@@ -35,28 +38,25 @@ SceneBuilder::BuildResult SceneBuilder::build(Scene& scene,
                                               const glm::vec2& worldSize,
                                               const glm::vec2& playerSize) const {
     BuildResult result{};
-    const std::filesystem::path metadataPath = "assets/women/Enchantress/animations.json";
+    const std::filesystem::path demoAssets = DEMO_ASSETS_DIR;
+    const std::filesystem::path metadataPath =
+        demoAssets / "women/Enchantress/animations.json";
     if (!std::filesystem::exists(metadataPath)) {
-        std::cerr << "Missing animation metadata: " << metadataPath << std::endl;
-        return result;
+        throw std::runtime_error(
+            "The Lost Heroin animation metadata is missing: " +
+            metadataPath.string());
     }
     auto player = std::make_unique<Player>();
     if (!player->loadFromMetadata(metadataPath)) {
-        std::cerr << "Failed to load player metadata" << std::endl;
-        return result;
+        throw std::runtime_error(
+            "Failed to load The Lost Heroin player metadata: " +
+            metadataPath.string());
     }
     if (inputService) {
         player->attachController(*inputService);
     }
-    FeelingsSystem::FeelingSnapshot playerFeeling{};
-    playerFeeling.id = "Enchantress";
-    playerFeeling.colorGrade = glm::vec4{1.0f, 0.96f, 0.92f, 1.0f};
-    playerFeeling.lightIntensityMul = 1.1f;
-    playerFeeling.ambientLightMul = glm::vec3{1.05f};
-    playerFeeling.animationSpeedMul = 1.05f;
-    playerFeeling.timeScale = 1.0f;
-    playerFeeling.uiTint = glm::vec4{1.0f, 0.9f, 0.9f, 1.0f};
-    player->addComponent<FeelingsComponent>(scene.feelings(), playerFeeling);
+    // The scene's emotional state is owned by the chapter mood system in Game
+    // (design/00-Overview.md); the player carries no hardcoded feeling.
     result.player = player.get();
     scene.addEntity(std::move(player));
     if (result.player) {
@@ -64,16 +64,10 @@ SceneBuilder::BuildResult SceneBuilder::build(Scene& scene,
         applyPlayerTransform(*result.player, worldSize, playerSize);
     }
 
-    Entity &ground = scene.createEntity();
-    auto &groundTransform = ground.addComponent<TransformComponent>();
-    groundTransform.setPosition(glm::vec2{-800.0f, 0.0f});
     const glm::vec2 groundSize{2000.0f, 80.0f};
     std::shared_ptr<GameObjects::Texture> groundTexture;
-    const std::filesystem::path relPath = "assets/PNG/BG_01/Layers/Ground_01.png";
-    std::filesystem::path texturePath = relPath;
-    if (!std::filesystem::exists(texturePath)) {
-        texturePath = std::filesystem::path("Demos/The Lost Heroin") / relPath;
-    }
+    const std::filesystem::path texturePath =
+        demoAssets / "PNG/BG_01/Layers/Ground_01.png";
     if (std::filesystem::exists(texturePath)) {
         groundTexture = Managers::TextureManager::loadTexture(texturePath.string());
     } else {
@@ -81,23 +75,26 @@ SceneBuilder::BuildResult SceneBuilder::build(Scene& scene,
     }
     if (groundTexture) {
         result.groundSprite = std::make_shared<GameObjects::Sprite>(
-                groundTexture,
-                groundTransform.getTransform().Position,
-                groundSize);
+                groundTexture, glm::vec2{0.0f}, groundSize);
     } else {
         result.groundSprite = std::make_shared<GameObjects::Sprite>(
-                groundTransform.getTransform().Position,
-                groundSize,
-                glm::vec3{0.30f, 0.55f, 0.32f});
+                glm::vec2{0.0f}, groundSize, glm::vec3{0.30f, 0.55f, 0.32f});
     }
-    ground.addComponent<SpriteComponent>(result.groundSprite.get(),
-                                         -1,
-                                         static_cast<int>(Rendering::RenderLayer::Gameplay));
-    ground.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
-    auto groundBody = std::make_unique<RigidBody>(0.0f, RigidBodyType::STATIC);
-    groundBody->setTransform(&groundTransform.getTransform());
-    ground.addComponent<RigidBodyComponent>(std::move(groundBody));
-//    ground.addComponent<LedgeComponent>();
+    // Tile static ground segments so the player can traverse far enough to see
+    // the parallax layers cycle instead of walking off a single short strip.
+    constexpr float kGroundExtent = 10000.0f;
+    for (float x = -kGroundExtent; x < kGroundExtent; x += groundSize.x) {
+        Entity &ground = scene.createEntity();
+        auto &groundTransform = ground.addComponent<TransformComponent>();
+        groundTransform.setPosition(glm::vec2{x, 0.0f});
+        ground.addComponent<SpriteComponent>(result.groundSprite,
+                                             -1,
+                                             static_cast<int>(Rendering::RenderLayer::Gameplay));
+        ground.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
+        auto groundBody = std::make_unique<RigidBody>(0.0f, RigidBodyType::STATIC);
+        groundBody->setTransform(&groundTransform.getTransform());
+        ground.addComponent<RigidBodyComponent>(std::move(groundBody));
+    }
 
     return result;
 }

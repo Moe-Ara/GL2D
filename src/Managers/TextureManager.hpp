@@ -5,9 +5,11 @@
 #ifndef GL2D_TEXTUREMANAGER_HPP
 #define GL2D_TEXTUREMANAGER_HPP
 #include "GameObjects/Texture.hpp"
+#include <array>
 #include <unordered_map>
 #include <memory>
 #include <string>
+struct GLFWwindow;
 namespace Managers {
 
     class TextureManager {
@@ -16,7 +18,9 @@ namespace Managers {
         static void cleanUnusedTextures();
 
     private:
-        static std::unordered_map<std::string, std::weak_ptr<GameObjects::Texture>> m_textureCache;
+        using TextureVariants = std::array<std::weak_ptr<GameObjects::Texture>, 2>;
+        using ContextCache = std::unordered_map<std::string, TextureVariants>;
+        static std::unordered_map<GLFWwindow*, ContextCache> m_textureCaches;
     };
 
 } // namespace Managers

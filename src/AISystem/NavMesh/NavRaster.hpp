@@ -1,39 +1,34 @@
 #ifndef NAV_RASTER_HPP
 #define NAV_RASTER_HPP
-#include <vector>
-#include <glm/vec2.hpp>
-#include <functional>
-#include "NavAABB.hpp"
+#include <cstddef>
 #include <cstdint>
-class NavRaster
-{
-    public:
-    NavRaster()=default;
-    NavRaster(int width, int height, float cellSize, const glm::vec2& origin)
-        : m_width(width), m_height(height), m_cellSize(cellSize), m_origin(origin), m_walkableCells(width*height, 1)
-    {
-        if (m_width <=0 || m_height <=0 || m_cellSize <=0.0f)
-        {
-            this->m_width = 0;
-            this->m_height = 0;
-            this->m_cellSize = 0.0f;
-            m_walkableCells.clear();
-        }
-    }
-    int getm_width() const { return m_width; }
-    int getm_height() const { return m_height; }
-    float getm_cellsize() const { return m_cellSize; }
-    glm::vec2 getm_origin() const { return m_origin; }
-    bool inBounds(int x, int y) const;
-    size_t getIndex(int x, int y) const;
-    bool isWalkable(int x, int y) const;
+#include <functional>
+#include <vector>
+
+#include <glm/vec2.hpp>
+
+#include "NavAABB.hpp"
+
+class NavRaster {
+public:
+    NavRaster() = default;
+    NavRaster(int width, int height, float cellSize, const glm::vec2& origin);
+
+    [[nodiscard]] int width() const { return m_width; }
+    [[nodiscard]] int height() const { return m_height; }
+    [[nodiscard]] float cellSize() const { return m_cellSize; }
+    [[nodiscard]] const glm::vec2& origin() const { return m_origin; }
+    [[nodiscard]] bool empty() const { return m_walkableCells.empty(); }
+    [[nodiscard]] bool inBounds(int x, int y) const;
+    [[nodiscard]] bool isWalkable(int x, int y) const;
     void setWalkable(int x, int y, bool walkable);
-    glm::vec2 cellCenter(int x, int y) const;
-    NavAABB cellBounds(int x, int y) const;
-    void worldToCell(const glm::vec2& worldPos, int& outX, int& outY) const;
-    glm::vec2 cellToWorld(int x, int y) const;
+    [[nodiscard]] glm::vec2 cellCenter(int x, int y) const;
+    [[nodiscard]] NavAABB cellBounds(int x, int y) const;
+    [[nodiscard]] bool worldToCell(const glm::vec2& worldPos, int& outX, int& outY) const;
+    [[nodiscard]] glm::vec2 cellToWorld(int x, int y) const;
+
     template<typename Func>
-    void forEachCell(Func func) const {
+    void forEachCell(Func&& func) const {
         for (int y = 0; y < m_height; ++y) {
             for (int x = 0; x < m_width; ++x) {
                 func(x, y, isWalkable(x, y));
@@ -42,13 +37,14 @@ class NavRaster
     }
     static NavRaster buildFromPredicate(int width, int height, float cellSize, const glm::vec2& origin,
                                         const std::function<bool(const NavAABB&)>& isWalkablePredicate);
-    private:
 
-    int m_width;
-    int m_height;
-    float m_cellSize;
-    glm::vec2 m_origin; 
-    std::vector<uint8_t> m_walkableCells; 
+private:
+    [[nodiscard]] std::size_t indexUnchecked(int x, int y) const;
 
+    int m_width{0};
+    int m_height{0};
+    float m_cellSize{0.0f};
+    glm::vec2 m_origin{0.0f};
+    std::vector<std::uint8_t> m_walkableCells;
 };
-#endif //NAV_RASTER_HPP
+#endif // NAV_RASTER_HPP

@@ -3,20 +3,31 @@
 //
 
 #include "ParticleEmitter.hpp"
-#include "RenderingSystem/ParticleRenderer.hpp"
+#include "Exceptions/SubsystemExceptions.hpp"
 #include <algorithm>
+#include <cmath>
+#include <stdexcept>
 
-ParticleEmitter::ParticleEmitter(std::size_t maxParticles, const ParticleEmitterConfig &config)
-: m_config(config), m_particles(maxParticles), m_rng(std::random_device{}()),m_unitDist(0.0f,1.0f)
-{
-
+namespace {
+std::size_t validatedCapacity(std::size_t capacity,
+                              const ParticleEmitterConfig& config) {
+    validateParticleEmitterConfig(capacity, config);
+    return capacity;
+}
 }
 
-ParticleEmitter::~ParticleEmitter() =default;
+ParticleEmitter::ParticleEmitter(std::size_t maxParticles, const ParticleEmitterConfig &config)
+: m_config(config), m_particles(validatedCapacity(maxParticles, config)),
+  m_rng(config.randomSeed),
+  m_unitDist(0.0f,1.0f)
+{
+}
 
 void ParticleEmitter::setPosition(const glm::vec2 &pos) {
-m_position=pos;
-    m_target=pos;
+    if (!std::isfinite(pos.x) || !std::isfinite(pos.y)) {
+        throw Engine::ParticleException("Emitter position must be finite");
+    }
+    m_position=pos;
 }
 
 const glm::vec2 &ParticleEmitter::getPosition() const {
@@ -24,11 +35,16 @@ const glm::vec2 &ParticleEmitter::getPosition() const {
 }
 
 void ParticleEmitter::setTarget(const glm::vec2 &target) {
+    if (!std::isfinite(target.x) || !std::isfinite(target.y)) {
+        throw Engine::ParticleException("Emitter target must be finite");
+    }
     m_target = target;
 }
 
 void ParticleEmitter::setConfig(const ParticleEmitterConfig &cfg) {
+    validateParticleEmitterConfig(m_particles.size(), cfg);
     m_config=cfg;
+    m_rng.seed(cfg.randomSeed);
 }
 
 const ParticleEmitterConfig &ParticleEmitter::getConfig() const {
@@ -36,12 +52,24 @@ const ParticleEmitterConfig &ParticleEmitter::getConfig() const {
 }
 
 void ParticleEmitter::update(float dt) {
-    if(m_config.spawnRate>0.0f){
-        m_spawnAccumulator+=m_config.spawnRate* dt;
-        unsigned int toSpawn=static_cast<unsigned int>(m_spawnAccumulator);
-        m_spawnAccumulator-=toSpawn;
-        for(unsigned int i=0; i<toSpawn; ++i){
-            spawnOne();
+    if (!std::isfinite(dt) || dt < 0.0f) {
+        throw Engine::ParticleException(
+            "ParticleEmitter::update requires finite, non-negative delta time");
+    }
+    if (dt == 0.0f) {
+        return;
+    }
+    if(m_emitting && m_config.spawnRate>0.0f){
+        const std::size_t available = m_particles.size() - m_liveParticleCount;
+        const double produced = std::min(
+            m_spawnAccumulator + static_cast<double>(m_config.spawnRate) * dt,
+            static_cast<double>(available) + 1.0);
+        const double wholeParticles = std::floor(produced);
+        m_spawnAccumulator = produced - wholeParticles;
+        const std::size_t toSpawn = std::min(
+            static_cast<std::size_t>(wholeParticles), available);
+        for(std::size_t i=0; i<toSpawn; ++i){
+            if (!spawnOne()) break;
         }
     }
     for(auto& p: m_particles){
@@ -49,11 +77,12 @@ void ParticleEmitter::update(float dt) {
         p.age+=dt;
         if(p.age>=p.lifeTime){
             p.alive= false;
+            --m_liveParticleCount;
             continue;
         }
         p.velocity+=p.acceleration*dt;
         if(m_config.drag>0.0f){
-            const float factor=std::max(0.0f,1.0f-m_config.drag*dt);
+            const float factor=std::exp(-m_config.drag*dt);
             p.velocity*=factor;
         }
         // Steering behaviors
@@ -70,35 +99,37 @@ void ParticleEmitter::update(float dt) {
                 p.velocity += tangential * (m_config.orbitStrength * dt);
             }
             if(m_config.spiralStrength!=0.0f){
-                p.velocity += dir * (m_config.spiralStrength * dt);
+                p.velocity -= dir * (m_config.spiralStrength * dt);
             }
         }
         p.position+=p.velocity*dt;
         p.rotation+=p.angularVelocity*dt;
         float t= p.age/p.lifeTime;
         p.color=glm::mix(m_config.startColor, m_config.endColor, t);
-    }
-}
-
-void ParticleEmitter::render(Rendering::ParticleRenderer &renderer) const {
-    for(const auto& p: m_particles){
-        if(!p.alive) continue;
-        renderer.submit({p.position, p.size, p.rotation, p.color});
+        p.size = p.initialSize * glm::mix(1.0f, m_config.endSizeMultiplier, t);
     }
 }
 
 void ParticleEmitter::burst(unsigned int count) {
-    for (unsigned int i = 0; i < count; ++i) {
-        spawnOne();
+    const std::size_t available = m_particles.size() - m_liveParticleCount;
+    const std::size_t toSpawn = std::min<std::size_t>(count, available);
+    for (std::size_t i = 0; i < toSpawn; ++i) {
+        if (!spawnOne()) break;
     }
 }
 
-void ParticleEmitter::spawnOne() {
-    auto it=std::find_if(m_particles.begin(),m_particles.end(),[](const Particle& p) {return !p.alive;});
-    if(it==m_particles.end()) return;
-
-    Particle& p=*it;
+bool ParticleEmitter::spawnOne() {
+    if (m_liveParticleCount >= m_particles.size()) {
+        return false;
+    }
+    std::size_t index = m_nextFreeIndex;
+    while (m_particles[index].alive) {
+        index = (index + 1) % m_particles.size();
+    }
+    m_nextFreeIndex = (index + 1) % m_particles.size();
+    Particle& p=m_particles[index];
     p.alive=true;
+    ++m_liveParticleCount;
     p.age=0.0f;
 
     float lifeRange=m_config.maxLifeTime-m_config.minLifeTime;
@@ -117,8 +148,13 @@ void ParticleEmitter::spawnOne() {
     float sizeRange=m_config.maxSize-m_config.minSize;
     float size=m_config.minSize+m_unitDist(m_rng)*sizeRange;
     p.size=glm::vec2(size);
+    p.initialSize = p.size;
 
     p.rotation=0.0f;
-    p.angularVelocity=0.0f;
+    const float angularRange = m_config.maxAngularVelocity -
+                               m_config.minAngularVelocity;
+    p.angularVelocity = m_config.minAngularVelocity +
+                        m_unitDist(m_rng) * angularRange;
     p.color=m_config.startColor;
+    return true;
 }

@@ -18,9 +18,10 @@ enum class CameraEventType{
 struct CameraEvent{
     CameraEventType type;
     glm::vec2 worldPos{0.0f};
-    float magnitude=0.0f;
-    float duration=0.0f;
-    float targetZoom=1.0f;
+    float magnitude{0.0f};
+    float duration{0.0f};
+    float targetZoom{1.0f};
+    float roughness{22.0f};
 };
 
 #endif //GL2D_CAMERAEVENT_HPP

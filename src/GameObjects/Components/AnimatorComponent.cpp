@@ -1,22 +1,12 @@
 #include "AnimatorComponent.hpp"
 #include "GameObjects/Sprite.hpp"
 
-namespace {
-std::shared_ptr<Graphics::Animator> wrapRawAnimator(Graphics::Animator *animator) {
-    if (!animator) {
-        return nullptr;
-    }
-    return std::shared_ptr<Graphics::Animator>(animator, [](Graphics::Animator *) {
-        // Non-owning wrapper.
-    });
-}
-} // namespace
+#include <cmath>
+#include <stdexcept>
+#include <utility>
 
 AnimatorComponent::AnimatorComponent(std::shared_ptr<Graphics::Animator> animator)
     : m_animator(std::move(animator)) {}
-
-AnimatorComponent::AnimatorComponent(Graphics::Animator *animator)
-    : AnimatorComponent(wrapRawAnimator(animator)) {}
 
 void AnimatorComponent::setAnimator(std::shared_ptr<Graphics::Animator> animator) {
     m_animator = std::move(animator);
@@ -40,6 +30,14 @@ void AnimatorComponent::play(const std::shared_ptr<Graphics::Animation> &animati
     }
 }
 
+void AnimatorComponent::setPlaybackSpeed(float multiplier) {
+    if (!std::isfinite(multiplier) || multiplier < 0.0f) {
+        throw std::invalid_argument(
+            "Animator playback speed must be finite and non-negative");
+    }
+    m_playbackSpeed = multiplier;
+}
+
 void AnimatorComponent::ensureAnimator() {
     if (m_animator || !m_sprite) {
         return;
@@ -50,6 +48,6 @@ void AnimatorComponent::ensureAnimator() {
 void AnimatorComponent::update(Entity &/*owner*/, double dt) {
     ensureAnimator();
     if (m_animator) {
-        m_animator->update(static_cast<float>(dt));
+        m_animator->update(static_cast<float>(dt) * m_playbackSpeed);
     }
 }

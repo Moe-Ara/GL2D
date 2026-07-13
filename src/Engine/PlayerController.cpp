@@ -32,7 +32,7 @@ void PlayerController::consumeActionEvent(const ActionEvent &event) {
         m_moveRight = event.value.x >= kGamepadDeadzone;
         m_axisUpdated = true;
     } else if (event.actionName == "MoveVertical" && axisChanged) {
-        const float axisY = -event.value.y;
+        const float axisY = -event.value.x;
         m_climbAxis = axisY;
         m_moveUp = axisY >= kGamepadDeadzone;
         m_moveDown = axisY <= -kGamepadDeadzone;
@@ -64,17 +64,25 @@ void PlayerController::consumeActionEvent(const ActionEvent &event) {
         if (event.sourceEvent.deviceType != InputDeviceType::Gamepad) {
             m_climbAxis = 0.0f;
         }
-    } else if (event.actionName == "Jump" && pressed) {
-        m_jumpQueued = true;
+    } else if (event.actionName == "Jump") {
+        if (pressed) {
+            m_jumpQueued = true;
+        } else if (released) {
+            m_jumpReleasedQueued = true;
+        }
     }
 }
 
-CharacterController::Intent PlayerController::gatherIntent(Entity &entity, double dt) {
+CharacterController::Intent PlayerController::gatherIntent(
+        Entity& /*entity*/, double /*dt*/) {
     const auto &actionEvents = m_inputService.getActionEvents();
     m_axisUpdated = false;
     m_climbAxisUpdated = false;
-    for (const auto &event: actionEvents) {
-        consumeActionEvent(event);
+    if (m_lastActionFrame != m_inputService.actionFrame()) {
+        for (const auto &event: actionEvents) {
+            consumeActionEvent(event);
+        }
+        m_lastActionFrame = m_inputService.actionFrame();
     }
 
     CharacterController::Intent intent{};
@@ -85,6 +93,7 @@ CharacterController::Intent PlayerController::gatherIntent(Entity &entity, doubl
         intent.moveAxis = (m_moveRight ? 1.0f : 0.0f) - (m_moveLeft ? 1.0f : 0.0f);
     }
     intent.jumpPressed = m_jumpQueued;
+    intent.jumpReleased = m_jumpReleasedQueued;
 
     const float climbAxisRaw = (std::abs(m_climbAxis) >= kGamepadDeadzone) ? m_climbAxis : 0.0f;
     float climbAxis = climbAxisRaw;
@@ -95,6 +104,7 @@ CharacterController::Intent PlayerController::gatherIntent(Entity &entity, doubl
 
     // Jump queue is single-use; consume it here.
     m_jumpQueued = false;
+    m_jumpReleasedQueued = false;
 
     // Simple hysteresis to zero small drift.
     if (std::abs(intent.moveAxis) < kAxisEpsilon) {
@@ -108,10 +118,12 @@ void PlayerController::resetInputState() {
     m_moveLeft = false;
     m_moveRight = false;
     m_jumpQueued = false;
+    m_jumpReleasedQueued = false;
     m_axisX = 0.0f;
     m_axisUpdated = false;
     m_moveUp = false;
     m_moveDown = false;
     m_climbAxis = 0.0f;
     m_climbAxisUpdated = false;
+    m_lastActionFrame = m_inputService.actionFrame();
 }

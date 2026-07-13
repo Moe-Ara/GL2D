@@ -23,14 +23,12 @@
 #include "Physics/PhysicsUnits.hpp"
 #include "RenderingSystem/RenderSystem.hpp"
 #include "RenderingSystem/Renderer.hpp"
-#include "RenderingSystem/ParticleRenderer.hpp"
 #include "GameObjects/Components/ControllerComponent.hpp"
 #include "Engine/PlayerController.hpp"
 #include "Engine/RopeHangComponent.hpp"
 #include "Engine/VehicleController.hpp"
 #include "Engine/VehicleMountComponent.hpp"
 #include "Engine/SwimmingComponent.hpp"
-#include "ParticleSystem/ParticleSystem.hpp"
 #include "ParticleSystem/ParticleEffectLoader.hpp"
 #include "GameObjects/Components/LightingComponent.hpp"
 #include "AudioSystem/AudioManager.hpp"
@@ -42,6 +40,10 @@
 #include "FeelingsSystem/FeelingsLoader.hpp"
 #include "Engine/DialogueSystem.hpp"
 #include "Exceptions/Gl2DException.hpp"
+#include "ECS/Components/SpriteRender.hpp"
+#include "ECS/Components/Transform2D.hpp"
+#include "ECS/Components/ParticleEmitter2D.hpp"
+#include "ECS/Components/ParticleRender2D.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -69,6 +71,25 @@ Camera* gActiveCamera = nullptr;
 bool gMouseWasDown = false;
 bool gEscWasDown = false;
 
+class GlfwLifetime {
+public:
+    explicit GlfwLifetime(GLFWwindow*& window) : m_window(window) {}
+    ~GlfwLifetime() {
+        gActiveCamera = nullptr;
+        if (m_window) {
+            glfwDestroyWindow(m_window);
+            m_window = nullptr;
+        }
+        glfwTerminate();
+    }
+
+    GlfwLifetime(const GlfwLifetime&) = delete;
+    GlfwLifetime& operator=(const GlfwLifetime&) = delete;
+
+private:
+    GLFWwindow*& m_window;
+};
+
 std::filesystem::path resolveMetadataDirectory(const std::string &metadataPath) {
     std::filesystem::path dir = std::filesystem::path(metadataPath).parent_path();
     if (dir.empty()) {
@@ -88,8 +109,13 @@ std::string resolveAssetPath(const std::filesystem::path &metadataDir, const std
     if (candidate.is_absolute()) {
         return candidate.string();
     }
-    auto resolved = (metadataDir / candidate).lexically_normal();
-    return resolved.string();
+    const auto metadataRelative = (metadataDir / candidate).lexically_normal();
+    if (std::filesystem::exists(metadataRelative)) {
+        return metadataRelative.string();
+    }
+    // Older metadata files store paths relative to the game root. Preserve
+    // support for them while preferring self-contained metadata directories.
+    return std::filesystem::absolute(candidate).lexically_normal().string();
 }
 
 void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
@@ -182,33 +208,51 @@ int main() {
     }
 
     GLFWwindow *window = nullptr;
+    GlfwLifetime glfwLifetime(window);
     Audio::AudioManager audio;
     try {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         window = glfwCreateWindow(1280, 720, "GL2D Prototype", nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window!" << std::endl;
-        glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
     glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) {
-        std::cerr << "Failed to initialize GLEW!" << std::endl;
+    const GLenum glewStatus = glewInit();
+    bool glewUsable = glewStatus == GLEW_OK;
+#ifdef GLEW_ERROR_NO_GLX_DISPLAY
+    // GLEW can report this when GLFW created a valid non-GLX context (for
+    // example EGL). Core OpenGL entry points are still usable in that case.
+    glewUsable = glewUsable ||
+                 (glewStatus == GLEW_ERROR_NO_GLX_DISPLAY && glGetString(GL_VERSION) != nullptr);
+#endif
+    if (!glewUsable) {
+        std::cerr << "Failed to initialize GLEW: "
+                  << reinterpret_cast<const char*>(glewGetErrorString(glewStatus))
+                  << " (code " << glewStatus << ")" << std::endl;
         return -1;
     }
 
     Rendering::Renderer renderer("Shaders/vertex.vert", "Shaders/fragment.frag");
-//    Rendering::ParticleRenderer particleRenderer;
+    UI::UIRenderer uiRenderer;
     Camera camera(1280.0f, 720.0f);
     gActiveCamera = &camera;
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     int fbWidth = 0, fbHeight = 0;
     glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
     framebuffer_size_callback(window, fbWidth, fbHeight);
-    camera.setFollowMode(CameraFollowMode::HardLock);
-    camera.setDamping(8.0f);
+    camera.setFollowMode(CameraFollowMode::CenterOnTarget);
+    camera.setDamping(7.5f);
+    camera.setFollowDelay(0.04f);
+    camera.setLookAheadMultiplier(0.1f);
+    camera.setLookAheadLimits({100.0f, 55.0f});
+    camera.setLookAheadSmoothing(8.0f);
+    camera.setShakeLimits({28.0f, 18.0f}, 1.75f);
     try {
         audio.init();
         // Register a couple of example triggers (ensure these files exist in assets/audio).
@@ -255,6 +299,7 @@ int main() {
     } catch (const std::exception& e) {
         std::cerr << "Feelings load failed: " << e.what() << std::endl;
     }
+    feelingsController.setTargets(&camera, nullptr, &audio);
 
     const auto animResult = loadAnimationsFromMetadata("assets/character/animations.json");
     std::shared_ptr<Graphics::Animation> startAnimation;
@@ -288,7 +333,7 @@ int main() {
     if (std::filesystem::exists(groundNormalPath)) {
         groundSprite->setNormalTexture(Managers::TextureManager::loadTexture(groundNormalPath));
     }
-    ground.addComponent<SpriteComponent>(groundSprite.get(), -1);
+    ground.addComponent<SpriteComponent>(groundSprite, -1);
     ground.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
     auto groundBody = std::make_unique<RigidBody>(0.0f, RigidBodyType::STATIC);
     groundBody->setTransform(&groundTransform.getTransform());
@@ -301,7 +346,7 @@ int main() {
     auto waterSprite = std::make_shared<GameObjects::Sprite>(waterTransform.getTransform().Position,
                                                              glm::vec2{1200.0f, 220.0f},
                                                              glm::vec3{0.10f, 0.35f, 0.70f});
-    water.addComponent<SpriteComponent>(waterSprite.get(), -2);
+    water.addComponent<SpriteComponent>(waterSprite, -2);
     auto &waterCollider = water.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, 0.0f);
     waterCollider.setTrigger(true);
     auto &waterVolume = water.addComponent<WaterVolumeComponent>();
@@ -329,7 +374,9 @@ int main() {
     playerSensor.setWorldEntities(&scene.getEntities());
     playerSensor.setPlatformLayerMask(1u << kMovingPlatformLayer);
     auto playerBody = std::make_unique<RigidBody>(1.0f, RigidBodyType::DYNAMIC);
-    playerBody->setLinearDamping(6.0f);
+    // CharacterController owns horizontal acceleration/deceleration; generic
+    // rigid-body damping would also weaken jumps and make input feel sluggish.
+    playerBody->setLinearDamping(0.0f);
     playerBody->setTransform(&playerTransform.getTransform());
     auto &playerRb = player.addComponent<RigidBodyComponent>(std::move(playerBody));
     auto controller = std::make_unique<PlayerController>(inputService);
@@ -342,7 +389,6 @@ int main() {
 
     camera.setTarget(&playerTransform.getTransform());
     camera.setWorldBounds(glm::vec4{-1000.0f, -200.0f, 2000.0f, 800.0f});
-//    particleRenderer.setBorder({0.0f, 0.0f, 0.0f, 1.0f}, 0.00f); // black, thin outline
 
     // Boat entity to exercise buoyancy and boat controller.
     Entity &boat = scene.createEntity();
@@ -351,7 +397,7 @@ int main() {
     auto boatSprite = std::make_shared<GameObjects::Sprite>(boatTransform.getTransform().Position,
                                                             glm::vec2{220.0f, 90.0f},
                                                             glm::vec3{0.45f, 0.25f, 0.12f});
-    boat.addComponent<SpriteComponent>(boatSprite.get(), -1);
+    boat.addComponent<SpriteComponent>(boatSprite, -1);
     auto &boatCollider = boat.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -6.0f);
     boatCollider.setLayer(kMovingPlatformLayer);
     auto boatBody = std::make_unique<RigidBody>(2.6f, RigidBodyType::DYNAMIC);
@@ -365,7 +411,6 @@ int main() {
     auto& mountComp = boat.addComponent<VehicleMountComponent>(inputService, &player);
     mountComp.setMountRadius(PhysicsUnits::toUnits(1.2f));
     mountComp.setSeatOffset(glm::vec2{0.0f, boatSprite->getSize().y * 0.25f});
-    mountComp.setDebugCamera(&camera);
     auto& boatSensor = boat.addComponent<GroundSensorComponent>();
     boatSensor.setWorldEntities(&scene.getEntities());
     boatCollider.ensureCollider(boat);
@@ -376,8 +421,8 @@ int main() {
     auto treeSprite = std::make_shared<GameObjects::Sprite>(treeTransform.getTransform().Position,
                                                              glm::vec2{40.0f, 220.0f},
                                                              glm::vec3{0.25f, 0.45f, 0.18f});
-    tree.addComponent<SpriteComponent>(treeSprite.get(), -1);
-    auto &treeCollider = tree.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -4.0f);
+    tree.addComponent<SpriteComponent>(treeSprite, -1);
+    tree.addComponent<ColliderComponent>(nullptr, ColliderType::AABB, -4.0f);
     auto treeBody = std::make_unique<RigidBody>(0.0f, RigidBodyType::STATIC);
     treeBody->setTransform(&treeTransform.getTransform());
     tree.addComponent<RigidBodyComponent>(std::move(treeBody));
@@ -408,8 +453,8 @@ int main() {
     Prefabs::RopePrefab::instantiate(scene, ropeConfig);
 
     // Particle effects setup
-    ParticleSystem particleSystem;
-    ParticleEmitter* electricEmitter = nullptr;
+    ParticleEffectDefinition electricEffect{};
+    bool hasElectricEffect = false;
     try {
         auto effects = ParticleEffectLoader::loadFromFile("assets/config/particles.json");
         auto it = std::find_if(effects.begin(), effects.end(), [](const auto& e){ return e.name == "blue_fire"; });
@@ -417,76 +462,77 @@ int main() {
             it = std::find_if(effects.begin(), effects.end(), [](const auto& e){ return e.name == "blue_electron"; });
         }
         if (it != effects.end()) {
-            electricEmitter = particleSystem.createEmitter(it->maxParticles, it->config);
+            electricEffect = *it;
+            hasElectricEffect = true;
         }
     } catch (const std::exception& ex) {
         std::cerr << "Failed to load particle effects: " << ex.what() << std::endl;
     }
-    if (!electricEmitter) {
-        // Fallback in case loading failed; keeps effect alive while player exists.
-        ParticleEmitterConfig fallback{};
-        fallback.spawnRate = 180.0f;
-        fallback.burstCount = 0;
-        fallback.minLifeTime = 0.6f;
-        fallback.maxLifeTime = 1.6f;
-        fallback.minSpeed = 40.0f;
-        fallback.maxSpeed = 110.0f;
-        fallback.direction = 1.57f;
-        fallback.spread = 2.6f;
-        fallback.minSize = 14.0f;
-        fallback.maxSize = 32.0f;
-        fallback.startColor = {0.35f, 0.9f, 1.8f, 0.9f};
-        fallback.endColor = {0.05f, 0.35f, 1.0f, 0.0f};
-        fallback.gravity = {0.0f, 80.0f};
-        fallback.drag = 0.35f;
-        electricEmitter = particleSystem.createEmitter(260, fallback);
+    if (!hasElectricEffect) {
+        electricEffect.name = "fallback_blue_fire";
+        electricEffect.maxParticles = 260;
+        electricEffect.config.spawnRate = 180.0f;
+        electricEffect.config.burstCount = 0;
+        electricEffect.config.minLifeTime = 0.6f;
+        electricEffect.config.maxLifeTime = 1.6f;
+        electricEffect.config.minSpeed = 40.0f;
+        electricEffect.config.maxSpeed = 110.0f;
+        electricEffect.config.direction = 1.57f;
+        electricEffect.config.spread = 2.6f;
+        electricEffect.config.minSize = 14.0f;
+        electricEffect.config.maxSize = 32.0f;
+        electricEffect.config.endSizeMultiplier = 0.2f;
+        electricEffect.config.startColor = {0.35f, 0.9f, 1.8f, 0.9f};
+        electricEffect.config.endColor = {0.05f, 0.35f, 1.0f, 0.0f};
+        electricEffect.config.gravity = {0.0f, 80.0f};
+        electricEffect.config.drag = 0.35f;
     }
-        if (electricEmitter) {
-            electricEmitter->setPosition(playerTransform.getTransform().Position);
-            electricEmitter->setTarget(playerTransform.getTransform().Position);
-            electricEmitter->burst(electricEmitter->getConfig().burstCount);
-        }
+    const ECS::Entity electricParticles = scene.registry().create();
+    scene.registry().emplace<ECS::Transform2D>(electricParticles).position =
+        playerTransform.getTransform().Position;
+    auto& electricEmitter = scene.registry().emplace<ECS::ParticleEmitter2D>(
+        electricParticles, electricEffect.maxParticles, electricEffect.config);
+    scene.registry().emplace<ECS::ParticleRender2D>(electricParticles).blendMode =
+        Rendering::ParticleBlendMode::Additive;
+    electricEmitter.localOffset = playerSprite->getSize() * 0.5f;
+    electricEmitter.targetOffset = electricEmitter.localOffset;
+    electricEmitter.requestBurst(electricEffect.config.burstCount);
 
     // Background layered parallax to make camera motion obvious.
-    Entity &background = scene.createEntity();
-    auto &bgTransform = background.addComponent<TransformComponent>();
-    bgTransform.setPosition(glm::vec2{-1600.0f, -400.0f});
+    const ECS::Entity background = scene.registry().create();
+    auto &bgTransform = scene.registry().emplace<ECS::Transform2D>(background);
+    bgTransform.position = {-1600.0f, -400.0f};
     auto bgTex = Managers::TextureManager::loadTexture("assets/BG/bg_sky.png");
     auto bgSprite = std::make_shared<GameObjects::Sprite>(bgTex,
-                                                          bgTransform.getTransform().Position,
+                                                          bgTransform.position,
                                                           glm::vec2{3200.0f, 1800.0f});
     const std::string bgNormalPath = "assets/BG/bg_sky_normal.png";
     if (std::filesystem::exists(bgNormalPath)) {
         bgSprite->setNormalTexture(Managers::TextureManager::loadTexture(bgNormalPath));
     }
-    background.addComponent<SpriteComponent>(bgSprite.get(), -10);
+    scene.registry().emplace<ECS::SpriteRender>(
+        background, bgSprite, static_cast<int>(Rendering::RenderLayer::Gameplay), -10, true);
 
     // Midground band for parallax contrast (solid color).
-    Entity &midground = scene.createEntity();
-    auto &midTransform = midground.addComponent<TransformComponent>();
-    midTransform.setPosition(glm::vec2{-1600.0f, -100.0f});
+    const ECS::Entity midground = scene.registry().create();
+    auto &midTransform = scene.registry().emplace<ECS::Transform2D>(midground);
+    midTransform.position = {-1600.0f, -100.0f};
     auto midTex = Managers::TextureManager::loadTexture("assets/BG/bg_forest.png");
     auto midSprite = std::make_shared<GameObjects::Sprite>(midTex,
-                                                           midTransform.getTransform().Position,
+                                                           midTransform.position,
                                                            glm::vec2{3200.0f, 1200.0f});
     const std::string midNormalPath = "assets/BG/bg_forest_normal.png";
     if (std::filesystem::exists(midNormalPath)) {
         midSprite->setNormalTexture(Managers::TextureManager::loadTexture(midNormalPath));
     }
-    midground.addComponent<SpriteComponent>(midSprite.get(), -9);
+    scene.registry().emplace<ECS::SpriteRender>(
+        midground, midSprite, static_cast<int>(Rendering::RenderLayer::Gameplay), -9, true);
 
     // Sample lights removed; rely on level-defined lights or fallback fills.
 
     // UI: pause menu screen loaded from JSON; textures resolved lazily.
-    std::unordered_map<std::string, std::shared_ptr<GameObjects::Texture>> uiTextures;
-    auto uiResolver = [&uiTextures](const std::string& texPath) -> GameObjects::Texture* {
-        auto it = uiTextures.find(texPath);
-        if (it != uiTextures.end()) {
-            return it->second.get();
-        }
-        auto tex = Managers::TextureManager::loadTexture(texPath);
-        uiTextures[texPath] = tex;
-        return tex ? tex.get() : nullptr;
+    auto uiResolver = [](const std::string& texturePath) {
+        return Managers::TextureManager::loadTexture(texturePath);
     };
     UI::UIScreen pauseScreen{};
     try {
@@ -526,11 +572,11 @@ int main() {
     }
 
     double lastTime = glfwGetTime();
+#ifdef _WIN32
     std::size_t frameCount = 0;
     auto lastStatTime = std::chrono::steady_clock::now();
     double fps = 0.0;
     double avgMs = 0.0;
-#ifdef _WIN32
     SYSTEM_INFO sysInfo{};
     GetSystemInfo(&sysInfo);
     const auto cpuCount = static_cast<double>(sysInfo.dwNumberOfProcessors == 0 ? 1 : sysInfo.dwNumberOfProcessors);
@@ -551,10 +597,7 @@ int main() {
         auto deltaTime = static_cast<float>(currentTime - lastTime);
         lastTime = currentTime;
 
-        // Update feelings controller (blending, timers) and apply to subsystems.
-//        feelingsController.setTargets(&camera, &renderer, nullptr /*particleRenderer*/, &audio);
-//        feelingsController.update(deltaTime * 1000.0f);
-        const float effectiveDt = deltaTime * feelingsController.timeScale();
+        feelingsController.update(deltaTime * 1000.0f);
 
         // Pull and resolve input for this frame so components can read getActionEvents().
         inputService.pollEvents();
@@ -580,7 +623,7 @@ int main() {
 //            }
 //        }
         audio.update();
-        dialogue.update(effectiveDt, audio);
+        dialogue.update(deltaTime, audio);
 
         // Toggle pause overlay on ESC press.
         const bool escDown = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
@@ -627,19 +670,9 @@ int main() {
             }
         }
 
-        scene.updateWorld(effectiveDt, camera, renderer);
-
-        // Update particle emitter to follow player
-        if (electricEmitter) {
-            electricEmitter->setPosition(playerTransform.getTransform().Position);
-            electricEmitter->setTarget(playerTransform.getTransform().Position);
-        }
-        particleSystem.update(effectiveDt);
-
-        // Draw particles after scene render
-//        particleRenderer.begin(camera.getViewProjection());
-//        particleSystem.render(particleRenderer);
-//        particleRenderer.end();
+        scene.registry().get<ECS::Transform2D>(electricParticles).position =
+            playerTransform.getTransform().Position;
+        scene.updateWorld(deltaTime, camera, renderer);
 
         // Render UI overlays (pause, dialogue) without clearing the scene.
         std::vector<UI::UIRenderCommand> uiCommands;
@@ -649,7 +682,7 @@ int main() {
         }
         dialogue.appendCommands(fbW, fbH, uiCommands);
         if (!uiCommands.empty()) {
-            UI::UIRenderer::render(uiCommands, fbW, fbH);
+            uiRenderer.render(uiCommands, fbW, fbH);
         }
 
 #ifdef _WIN32
@@ -679,25 +712,13 @@ int main() {
     }
 
     audio.shutdown();
-    glfwTerminate();
     return 0;
     } catch (const Engine::GL2DException&) {
-        if (window) {
-            glfwDestroyWindow(window);
-        }
-        glfwTerminate();
         return 3;
     } catch (const std::exception& ex) {
-        if (window) {
-            glfwDestroyWindow(window);
-        }
-        glfwTerminate();
+        std::cerr << "Fatal error: " << ex.what() << '\n';
         return 3;
     } catch (...) {
-        if (window) {
-            glfwDestroyWindow(window);
-        }
-        glfwTerminate();
         return 3;
     }
 }

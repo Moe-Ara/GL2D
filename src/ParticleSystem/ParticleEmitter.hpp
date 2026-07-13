@@ -6,24 +6,22 @@
 #define GL2D_PARTICLEEMITTER_HPP
 #include <vector>
 #include <random>
-#include <cstdlib>
 #include "ParticleEmitterConfig.hpp"
 #include "Particle.hpp"
 
-namespace Rendering{class Renderer; class ParticleRenderer;}
 class ParticleEmitter {
 public:
     explicit ParticleEmitter(std::size_t maxParticles, const ParticleEmitterConfig& config);
 
-    virtual ~ParticleEmitter();
+    ~ParticleEmitter() = default;
 
     ParticleEmitter(const ParticleEmitter &other) = delete;
 
     ParticleEmitter &operator=(const ParticleEmitter &other) = delete;
 
-    ParticleEmitter(ParticleEmitter &&other) = delete;
+    ParticleEmitter(ParticleEmitter &&other) noexcept = default;
 
-    ParticleEmitter &operator=(ParticleEmitter &&other) = delete;
+    ParticleEmitter &operator=(ParticleEmitter &&other) noexcept = default;
 
     void setPosition(const glm::vec2& pos);
     const glm::vec2& getPosition()const;
@@ -31,20 +29,26 @@ public:
     void setConfig(const ParticleEmitterConfig& cfg);
     const ParticleEmitterConfig& getConfig() const;
     const std::vector<Particle>& getParticles() const { return m_particles; }
+    [[nodiscard]] std::size_t liveParticleCount() const noexcept { return m_liveParticleCount; }
+    [[nodiscard]] bool isFinished() const noexcept { return m_liveParticleCount == 0; }
+    void setEmitting(bool emitting) noexcept { m_emitting = emitting; }
+    [[nodiscard]] bool isEmitting() const noexcept { return m_emitting; }
     void update(float dt);
-    void render(Rendering::ParticleRenderer& renderer) const;
     void burst(unsigned  int count);
 private:
     glm::vec2 m_position{0.0f,0.0f};
     ParticleEmitterConfig m_config;
     std::vector<Particle> m_particles;
-    float m_spawnAccumulator{0.0f};
+    double m_spawnAccumulator{0.0};
+    std::size_t m_nextFreeIndex{0};
+    std::size_t m_liveParticleCount{0};
+    bool m_emitting{true};
     glm::vec2 m_target{0.0f,0.0f};
 
     mutable std::mt19937 m_rng;
     std::uniform_real_distribution<float> m_unitDist;
 
-    void spawnOne();
+    bool spawnOne();
 };
 
 

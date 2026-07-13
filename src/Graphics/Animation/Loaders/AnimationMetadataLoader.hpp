@@ -20,6 +20,7 @@ namespace Loaders {
         glm::vec4 uvRect{0.0f, 0.0f, 1.0f, 1.0f};
         float duration{-1.0f};
         std::string texturePath;
+        std::string normalTexturePath;
         std::string eventName;
     };
 

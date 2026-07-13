@@ -26,6 +26,7 @@ target_compile_definitions(TheLostHeroin
         PRIVATE
         GL2D_ENGINE_SHADER_DIR=\"${SHADERS_DIR}\"
         DEMO_BACKGROUND_DIR=\"${DEMO_ASSETS_DIR}/PNG\"
+        DEMO_ASSETS_DIR=\"${CMAKE_CURRENT_BINARY_DIR}/assets\"
 )
 
 # Link against the engine target defined in the root CMakeLists
@@ -37,13 +38,14 @@ target_link_libraries(TheLostHeroin
 # Make sure engine builds before the demo (usually automatic, but explicit is ok)
 add_dependencies(TheLostHeroin gl2d_engine)
 
-# Optional: copy demo-specific assets/shaders
-if(EXISTS "${DEMO_ASSETS_DIR}")
-    file(COPY ${DEMO_ASSETS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
+# Copy shared engine assets first, then demo assets so files the demo authors
+# (e.g. config/feelings.json) override the engine samples of the same name.
 if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
     file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(EXISTS "${DEMO_ASSETS_DIR}")
+    file(COPY ${DEMO_ASSETS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(EXISTS "${DEMO_SHADERS_DIR}")

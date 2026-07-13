@@ -19,6 +19,7 @@ struct Particle{
     float age{0.0f};
 
     glm::vec2 size{1.0f,1.0f};
+    glm::vec2 initialSize{1.0f,1.0f};
     glm::vec4 color{1.0f};
     bool alive{false};
 };

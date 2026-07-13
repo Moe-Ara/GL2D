@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/moe/Projects/GL2D/build-prof/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

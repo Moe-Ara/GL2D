@@ -25,7 +25,8 @@ public:
         void* user{nullptr};
     };
 
-    Quadtree(const AABB& worldBounds, Config config = {});
+    explicit Quadtree(const AABB& worldBounds);
+    Quadtree(const AABB& worldBounds, Config config);
 
     void clear();
     void setBounds(const AABB& worldBounds);
@@ -62,8 +63,10 @@ private:
     bool fitsChild(const Node& node, const AABB& bounds, int childIndex) const;
     void insert(Node& node, const AABB& bounds, void* user, int depth);
     void query(const Node& node, const AABB& queryBounds, std::vector<void*>& out) const;
-    bool remove(Node& node, void* user);
+    bool remove(Node& node, void* user, int depth);
     void maybeMerge(Node& node, int depth);
+    [[nodiscard]] std::size_t itemCount(const Node& node) const;
+    void collectItems(Node& node, std::vector<Entry>& output);
 
     Config m_config{};
     Node m_root{};

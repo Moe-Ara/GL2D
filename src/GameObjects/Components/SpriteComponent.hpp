@@ -12,10 +12,7 @@
 
 class SpriteComponent : public IComponent {
 public:
-    explicit SpriteComponent(GameObjects::Sprite* sprite = nullptr,
-                             int zIndex = 0,
-                             int layer = static_cast<int>(Rendering::RenderLayer::Gameplay));
-    explicit SpriteComponent(std::shared_ptr<GameObjects::Sprite> sprite,
+    explicit SpriteComponent(std::shared_ptr<GameObjects::Sprite> sprite = nullptr,
                              int zIndex = 0,
                              int layer = static_cast<int>(Rendering::RenderLayer::Gameplay));
     ~SpriteComponent() override = default;
@@ -31,7 +28,6 @@ public:
     int layer() const { return m_layer; }
     void setZIndex(int z) { m_zIndex = z; }
     void setLayer(int layer) { m_layer = layer; }
-    void setSprite(GameObjects::Sprite* sprite);
     void setSprite(std::shared_ptr<GameObjects::Sprite> sprite);
 
 private:

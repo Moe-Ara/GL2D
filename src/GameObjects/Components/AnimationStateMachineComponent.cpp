@@ -5,8 +5,11 @@
 #include "AnimationStateMachineComponent.hpp"
 #include "Graphics/Animation/AnimationStateMachine.hpp"
 
-AnimationStateMachineComponent::AnimationStateMachineComponent(Graphics::AnimationStateMachine *stateMachine)
-    : m_stateMachine(stateMachine) {}
+#include <utility>
+
+AnimationStateMachineComponent::AnimationStateMachineComponent(
+        std::shared_ptr<Graphics::AnimationStateMachine> stateMachine)
+    : m_stateMachine(std::move(stateMachine)) {}
 
 void AnimationStateMachineComponent::update(Entity &/*owner*/, double dt) {
     if (m_stateMachine) {

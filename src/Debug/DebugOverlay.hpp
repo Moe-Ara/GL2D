@@ -15,8 +15,11 @@ class Renderer;
 class DebugOverlay {
 public:
     static void toggle() { s_enabled = !s_enabled; }
-    static bool enabled() { return s_enabled; }
-    static void render(const Scene &scene, Camera &camera, Rendering::Renderer &renderer);
+    static void setEnabled(bool enabled) { s_enabled = enabled; }
+    [[nodiscard]] static bool enabled() { return s_enabled; }
+    static void render(const Scene& scene,
+                       const Camera& camera,
+                       Rendering::Renderer& renderer);
 private:
     static bool s_enabled;
 };
