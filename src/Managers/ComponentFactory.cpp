@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cctype>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace {
@@ -87,33 +88,48 @@ std::unique_ptr<IComponent> ComponentFactory::create(const ComponentSpec &specs)
 
     if (specs.type == "Sprite") {
         auto it = specs.strings.find("spriteId");
-        GameObjects::Sprite *sprite = nullptr;
-        if (it != specs.strings.end()) {
-            sprite = SpriteManager::get(it->second);
+        if (it == specs.strings.end() || it->second.empty()) {
+            throw std::invalid_argument(
+                "ComponentFactory Sprite requires a non-empty spriteId");
         }
-        if (sprite) {
-            auto owned = sprite->clone();
-            return std::make_unique<SpriteComponent>(owned);
+        auto sprite = SpriteManager::get(it->second);
+        if (!sprite) {
+            throw std::invalid_argument(
+                "ComponentFactory Sprite references an unknown or expired spriteId: " +
+                it->second);
         }
-        return std::make_unique<SpriteComponent>(sprite);
+        return std::make_unique<SpriteComponent>(sprite->clone());
     }
 
     if (specs.type == "Animator") {
         auto it = specs.strings.find("animatorId");
-        Graphics::Animator *anim = nullptr;
-        if (it != specs.strings.end()) {
-            anim = AnimatorManager::get(it->second);
+        if (it == specs.strings.end() || it->second.empty()) {
+            throw std::invalid_argument(
+                "ComponentFactory Animator requires a non-empty animatorId");
         }
-        return std::make_unique<AnimatorComponent>(anim);
+        auto animator = AnimatorManager::get(it->second);
+        if (!animator) {
+            throw std::invalid_argument(
+                "ComponentFactory Animator references an unknown or expired animatorId: " +
+                it->second);
+        }
+        return std::make_unique<AnimatorComponent>(std::move(animator));
     }
 
     if (specs.type == "AnimStateMachine") {
         auto it = specs.strings.find("stateMachineId");
-        Graphics::AnimationStateMachine *sm = nullptr;
-        if (it != specs.strings.end()) {
-            sm = AnimationStateMachineManager::get(it->second);
+        if (it == specs.strings.end() || it->second.empty()) {
+            throw std::invalid_argument(
+                "ComponentFactory AnimStateMachine requires a non-empty stateMachineId");
         }
-        return std::make_unique<AnimationStateMachineComponent>(sm);
+        auto stateMachine = AnimationStateMachineManager::get(it->second);
+        if (!stateMachine) {
+            throw std::invalid_argument(
+                "ComponentFactory AnimStateMachine references an unknown or expired stateMachineId: " +
+                it->second);
+        }
+        return std::make_unique<AnimationStateMachineComponent>(
+            std::move(stateMachine));
     }
 
     if (specs.type == "Tilemap") {
@@ -144,22 +160,31 @@ std::unique_ptr<IComponent> ComponentFactory::create(const ComponentSpec &specs)
     }
 
     if (specs.type == "Trigger") {
-        auto comp = std::make_unique<TriggerComponent>();
-        auto posX = specs.numbers.find("posX");
-        auto posY = specs.numbers.find("posY");
-        auto sizeX = specs.numbers.find("sizeX");
-        auto sizeY = specs.numbers.find("sizeY");
-        if (posX != specs.numbers.end() && posY != specs.numbers.end()) {
-            comp->position = {posX->second, posY->second};
-        }
-        if (sizeX != specs.numbers.end() && sizeY != specs.numbers.end()) {
-            comp->size = {sizeX->second, sizeY->second};
-        }
         auto evIt = specs.strings.find("eventId");
-        if (evIt != specs.strings.end()) {
-            comp->eventId = evIt->second;
+        if (evIt == specs.strings.end() || evIt->second.empty()) {
+            throw std::invalid_argument(
+                "ComponentFactory Trigger requires a non-empty eventId");
         }
-        return comp;
+        TriggerActivationMode mode = TriggerActivationMode::OnEnter;
+        if (auto activation = specs.strings.find("activation");
+            activation != specs.strings.end()) {
+            const std::string value = toLower(activation->second);
+            if (value == "onenter") {
+                mode = TriggerActivationMode::OnEnter;
+            } else if (value == "onexit") {
+                mode = TriggerActivationMode::OnExit;
+            } else if (value == "whileinside") {
+                mode = TriggerActivationMode::WhileInside;
+            } else if (value == "manual") {
+                mode = TriggerActivationMode::Manual;
+            } else {
+                throw std::invalid_argument(
+                    "ComponentFactory Trigger has unknown activation: " +
+                    activation->second);
+            }
+        }
+        return std::make_unique<TriggerComponent>(
+            evIt->second, mode, specs.numbers);
     }
 
     if (specs.type == "Collider") {

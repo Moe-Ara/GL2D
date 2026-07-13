@@ -1,19 +1,40 @@
 #ifndef GL2D_UIRENDERER_HPP
 #define GL2D_UIRENDERER_HPP
 
-#include <vector>
+#include <memory>
 #include <string>
+#include <vector>
+
 #include "UI/UIElements.hpp"
 
 namespace UI {
 
-// Simple immediate-mode UI renderer for UIRenderCommand lists.
+// Core-profile UI renderer. The instance owns all GL resources and must be
+// destroyed before its OpenGL context.
 class UIRenderer {
 public:
-    // Draws UI commands in screen space (origin bottom-left) over the current backbuffer.
-    static void render(const std::vector<UIRenderCommand>& commands, int fbWidth, int fbHeight);
-    // Load a TrueType font for UI text (fallbacks to built-in bitmap if load fails).
-    static bool setFont(const std::string& ttfPath, float pixelHeight = 32.0f);
+    explicit UIRenderer(const std::string& vertexShader = "Shaders/ui.vert",
+                        const std::string& fragmentShader = "Shaders/ui.frag");
+    ~UIRenderer();
+
+    UIRenderer(const UIRenderer&) = delete;
+    UIRenderer& operator=(const UIRenderer&) = delete;
+    UIRenderer(UIRenderer&&) = delete;
+    UIRenderer& operator=(UIRenderer&&) = delete;
+
+    // Draws commands in screen space with a bottom-left origin.
+    void render(const std::vector<UIRenderCommand>& commands,
+                int framebufferWidth,
+                int framebufferHeight);
+
+    // Replaces the current TrueType atlas only after a new atlas is fully built.
+    // Returns false when the file cannot be read or baked; bitmap fallback remains available.
+    bool setFont(const std::string& ttfPath, float pixelHeight = 32.0f);
+    [[nodiscard]] bool hasFont() const noexcept;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 } // namespace UI

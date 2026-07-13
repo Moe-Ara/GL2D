@@ -102,9 +102,9 @@ bool Player::loadFromMetadata(const std::filesystem::path &metadataPath) {
     }
 
     if (!m_spriteComponent) {
-        m_spriteComponent = &addComponent<SpriteComponent>(m_sprite.get(), 0);
+        m_spriteComponent = &addComponent<SpriteComponent>(m_sprite, 0);
     } else {
-        m_spriteComponent->setSprite(m_sprite.get());
+        m_spriteComponent->setSprite(m_sprite);
     }
 
     if (!m_transformComponent) {
@@ -114,8 +114,11 @@ bool Player::loadFromMetadata(const std::filesystem::path &metadataPath) {
     if (!m_colliderComponent) {
         m_colliderComponent = &addComponent<ColliderComponent>();
         m_colliderComponent->setRequestedType(ColliderType::CAPSULE);
-        m_colliderComponent->setCapsuleSizeOverride(glm::vec2{150.0f, 70.0f});
-        m_colliderComponent->setCapsuleOffsetOverride(glm::vec2{0.f, -90.0f});
+        // The Enchantress body occupies roughly 160x209 px of the 400px frame
+        // with the feet on the frame's bottom edge. A standing capsule (width
+        // < height) with its bottom at local y=0 keeps the feet on the floor.
+        m_colliderComponent->setCapsuleSizeOverride(glm::vec2{80.0f, 200.0f});
+        m_colliderComponent->setCapsuleOffsetOverride(glm::vec2{0.0f, -100.0f});
     }
     if (m_colliderComponent) {
         m_colliderComponent->ensureCollider(*this);
@@ -123,7 +126,11 @@ bool Player::loadFromMetadata(const std::filesystem::path &metadataPath) {
 
     if (!m_rigidBodyComponent) {
         auto body = std::make_unique<RigidBody>(1.0f, RigidBodyType::DYNAMIC);
-        body->setLinearDamping(6.0f);
+        body->setLinearDamping(0.0f);
+        // The controller drives horizontal velocity directly; contact friction
+        // and bounce would fight it, so keep the character's material inert.
+        body->setFriction(0.0f);
+        body->setRestitution(0.0f);
         m_rigidBodyComponent = &addComponent<RigidBodyComponent>(std::move(body));
     }
     if (m_rigidBodyComponent) {

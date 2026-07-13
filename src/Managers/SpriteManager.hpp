@@ -6,8 +6,9 @@
 #define GL2D_SPRITEMANAGER_HPP
 
 
-#include <unordered_map>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include "GameObjects/Sprite.hpp"
 
 class SpriteManager {
@@ -24,11 +25,16 @@ public:
 
     SpriteManager &operator=(SpriteManager &&other) = delete;
 
-    static GameObjects::Sprite* get(const std::string& id);
-    static void registerSprite(const std::string& id, GameObjects::Sprite* s);
+    // Registries are non-owning caches. Callers receive shared ownership when
+    // the registered asset is still alive; expired entries are removed lazily.
+    static std::shared_ptr<GameObjects::Sprite> get(const std::string& id);
+    static void registerSprite(
+        const std::string& id, const std::shared_ptr<GameObjects::Sprite>& sprite);
     static bool contains(const std::string& id);
+    static bool unregisterSprite(const std::string& id);
+    static void clear() noexcept;
 private:
-    static std::unordered_map<std::string, GameObjects::Sprite*> m_sprites;
+    static std::unordered_map<std::string, std::weak_ptr<GameObjects::Sprite>> m_sprites;
 };
 
 

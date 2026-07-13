@@ -1,5 +1,9 @@
 # Level Building System Backlog (Production-Ready)
 
+> Historical planning document. For the implemented runtime ownership, validation,
+> factory, and trigger contracts, see [ContentRuntime.md](ContentRuntime.md). Items
+> below are proposals and may already be complete or superseded.
+
 The following plan assumes the engine uses:
 * Lightweight ECS-style composition with `Transform`, `SpriteRenderer`, `Collider`, `ScriptComponent`, etc.
 * Batched sprite rendering via OpenGL + texture atlases + orthographic projection (GLM).

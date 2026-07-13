@@ -10,14 +10,16 @@
 #include <glm/vec2.hpp>
 #include "ParticleEmitter.hpp"
 #include "ParticleEffectLoader.hpp"
-#include "RenderingSystem/ParticleRenderer.hpp"
+
+namespace Rendering { class ParticleRenderer; }
 
 class ParticleEffectSystem {
 public:
     ParticleEffectSystem() = default;
 
     // Spawns a one-shot effect: creates an emitter, bursts, and tracks it until all particles die.
-    // Returns pointer to the emitter if you want to reposition it; ownership stays internal.
+    // Returns a non-owning pointer for repositioning. It becomes invalid as soon
+    // as the final particle expires and the effect is removed during update().
     ParticleEmitter* spawnOneShot(const glm::vec2& position,
                                   const ParticleEffectDefinition& def,
                                   unsigned int burstOverride = 0);

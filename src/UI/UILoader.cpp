@@ -4,8 +4,10 @@
 
 #include "UI/UILoader.hpp"
 
+#include <cmath>
 #include <fstream>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 #include <glm/common.hpp>
@@ -17,16 +19,24 @@ namespace {
 using Utils::JsonValue;
 
 float numberOrDefault(const JsonValue& obj, const std::string& key, float fallback) {
-    if (obj.isObject() && obj.hasKey(key) && obj.at(key).isNumber()) {
-        return static_cast<float>(obj.at(key).asNumber());
+    if (!obj.isObject() || !obj.hasKey(key)) return fallback;
+    if (!obj.at(key).isNumber()) {
+        throw Engine::UIException("UI field '" + key + "' must be a number");
     }
-    return fallback;
+    const float value = static_cast<float>(obj.at(key).asNumber());
+    if (!std::isfinite(value)) {
+        throw Engine::UIException("UI field '" + key + "' must be finite");
+    }
+    return value;
 }
 
 glm::vec2 vec2OrDefault(const JsonValue& obj, const std::string& key, glm::vec2 fallback) {
     if (!obj.isObject() || !obj.hasKey(key)) return fallback;
     const auto& v = obj.at(key);
-    if (!v.isArray() || v.asArray().size() != 2) return fallback;
+    if (!v.isArray() || v.asArray().size() != 2 ||
+        !v.asArray()[0].isNumber() || !v.asArray()[1].isNumber()) {
+        throw Engine::UIException("UI field '" + key + "' must be a two-number array");
+    }
     return glm::vec2(
         static_cast<float>(v.asArray()[0].asNumber()),
         static_cast<float>(v.asArray()[1].asNumber())
@@ -36,7 +46,11 @@ glm::vec2 vec2OrDefault(const JsonValue& obj, const std::string& key, glm::vec2 
 glm::vec4 vec4OrDefault(const JsonValue& obj, const std::string& key, glm::vec4 fallback) {
     if (!obj.isObject() || !obj.hasKey(key)) return fallback;
     const auto& v = obj.at(key);
-    if (!v.isArray() || v.asArray().size() != 4) return fallback;
+    if (!v.isArray() || v.asArray().size() != 4 ||
+        !v.asArray()[0].isNumber() || !v.asArray()[1].isNumber() ||
+        !v.asArray()[2].isNumber() || !v.asArray()[3].isNumber()) {
+        throw Engine::UIException("UI field '" + key + "' must be a four-number array");
+    }
     return glm::vec4(
         static_cast<float>(v.asArray()[0].asNumber()),
         static_cast<float>(v.asArray()[1].asNumber()),
@@ -72,20 +86,24 @@ UI::UIEffect parseEffect(const JsonValue& node) {
 UI::ButtonMode parseButtonMode(const std::string& modeStr) {
     if (modeStr == "trigger") return UI::ButtonMode::Trigger;
     if (modeStr == "hold") return UI::ButtonMode::Hold;
-    return UI::ButtonMode::Click;
+    if (modeStr == "click") return UI::ButtonMode::Click;
+    throw Engine::UIException("Unsupported UI button mode: " + modeStr);
 }
 
 UI::UIMenu::LayoutDirection parseDirection(const std::string& dir) {
     if (dir == "horizontal") return UI::UIMenu::LayoutDirection::Horizontal;
-    return UI::UIMenu::LayoutDirection::Vertical;
+    if (dir == "vertical") return UI::UIMenu::LayoutDirection::Vertical;
+    throw Engine::UIException("Unsupported UI menu direction: " + dir);
 }
 
-GameObjects::Texture* resolveTexture(const JsonValue& node,
-                                     const UI::UILoader::TextureResolver& resolver) {
-    if (!resolver) return nullptr;
-    if (!node.isObject() || !node.hasKey("texture")) return nullptr;
+std::shared_ptr<GameObjects::Texture> resolveTexture(
+    const JsonValue& node, const UI::UILoader::TextureResolver& resolver) {
+    if (!resolver) return {};
+    if (!node.isObject() || !node.hasKey("texture")) return {};
     const auto& texNode = node.at("texture");
-    if (!texNode.isString()) return nullptr;
+    if (!texNode.isString()) {
+        throw Engine::UIException("UI field 'texture' must be a string");
+    }
     return resolver(texNode.asString());
 }
 
@@ -126,7 +144,7 @@ std::shared_ptr<UI::UIElement> buildElement(const JsonValue& node,
     UI::UITransform tx = parseTransform(node);
     UI::UIEffect fx = parseEffect(node);
     const float zIndex = numberOrDefault(node, "z", 1000.0f);
-    GameObjects::Texture* texture = resolveTexture(node, resolver);
+    std::shared_ptr<GameObjects::Texture> texture = resolveTexture(node, resolver);
 
     std::shared_ptr<UI::UIElement> element;
     if (type == "button") {
@@ -205,6 +223,9 @@ UIScreen UILoader::loadFromFile(const std::string& path, TextureResolver resolve
     UIScreen screen{};
     screen.canvasSize = vec2OrDefault(root, "canvas", screen.canvasSize);
     screen.clearColor = vec4OrDefault(root, "clearColor", screen.clearColor);
+    if (screen.canvasSize.x <= 0.0f || screen.canvasSize.y <= 0.0f) {
+        throw Engine::UIException("UI canvas dimensions must be positive");
+    }
 
     if (root.hasKey("elements") && root.at("elements").isArray()) {
         for (const auto& node : root.at("elements").asArray()) {
@@ -213,6 +234,17 @@ UIScreen UILoader::loadFromFile(const std::string& path, TextureResolver resolve
     } else {
         throw Engine::UIException("UI file missing 'elements' array");
     }
+
+    std::unordered_set<std::string> ids;
+    std::function<void(const std::shared_ptr<UIElement>&)> validateIds;
+    validateIds = [&](const std::shared_ptr<UIElement>& element) {
+        if (!element) return;
+        if (!ids.insert(element->id()).second) {
+            throw Engine::UIException("Duplicate UI element id: " + element->id());
+        }
+        for (const auto& child : element->children()) validateIds(child);
+    };
+    for (const auto& element : screen.roots) validateIds(element);
 
     return screen;
 }

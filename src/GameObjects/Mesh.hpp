@@ -7,7 +7,8 @@
 
 #include <vector>
 #include <memory>
-#include <gl/glew.h>
+#include <cstdint>
+#include <GL/glew.h>
 #include "Vertex.hpp"
 #include "Texture.hpp"
 namespace GameObjects {
@@ -31,14 +32,14 @@ namespace GameObjects {
         void updateVertices(const std::vector<Vertex>& vertices);
         void setTexture(std::shared_ptr<Texture> texture);
     private:
+        void releaseGpuResources() noexcept;
         void createVertexBuffer(const std::vector<Vertex>& vertices);
         void createIndexBuffer(const std::vector<uint32_t>& indices);
-        std::vector<Vertex> m_vertices;
-        std::vector<uint32_t> m_indices;
         GLuint m_vbo{},m_ibo{},m_vao{};
         std::shared_ptr<Texture> m_texture;
         GLsizei m_indexCount{};
         GLsizeiptr m_vertexBufferSize{};
+        uint32_t m_maxIndex{};
 
     };
 

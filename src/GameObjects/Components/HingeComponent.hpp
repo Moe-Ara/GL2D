@@ -17,28 +17,21 @@ public:
     void setTarget(Entity* target) { m_target = target; }
     Entity* target() const { return m_target; }
 
-    void setAnchorSelf(const glm::vec2& anchor) { m_anchorSelf = anchor; }
+    void setAnchorSelf(const glm::vec2& anchor);
     const glm::vec2& anchorSelf() const { return m_anchorSelf; }
 
-    void setAnchorTarget(const glm::vec2& anchor) { m_anchorTarget = anchor; }
+    void setAnchorTarget(const glm::vec2& anchor);
     const glm::vec2& anchorTarget() const { return m_anchorTarget; }
 
     void setEnabled(bool enabled) { m_enabled = enabled; }
     bool isEnabled() const { return m_enabled; }
-    void setReferenceAngle(float angle) { m_referenceAngle = angle; }
+    void setReferenceAngle(float angle);
     float referenceAngle() const { return m_referenceAngle; }
 
     void enableLimits(bool enabled) { m_limitsEnabled = enabled; }
     bool limitsEnabled() const { return m_limitsEnabled; }
-    void setLimitRange(float lower, float upper) {
-        m_lowerLimit = lower;
-        m_upperLimit = upper;
-    }
-    void setLimitParameters(float stiffness, float damping, float maxTorque) {
-        m_limitStiffness = stiffness;
-        m_limitDamping = damping;
-        m_maxLimitTorque = maxTorque;
-    }
+    void setLimitRange(float lower, float upper);
+    void setLimitParameters(float stiffness, float damping, float maxTorque);
     float lowerLimit() const { return m_lowerLimit; }
     float upperLimit() const { return m_upperLimit; }
     float limitStiffness() const { return m_limitStiffness; }
@@ -47,11 +40,8 @@ public:
 
     void enableMotor(bool enabled) { m_motorEnabled = enabled; }
     bool motorEnabled() const { return m_motorEnabled; }
-    void setMotorSpeed(float speed) { m_motorSpeed = speed; }
-    void setMotorParameters(float stiffness, float maxTorque) {
-        m_motorStiffness = stiffness;
-        m_maxMotorTorque = maxTorque;
-    }
+    void setMotorSpeed(float speed);
+    void setMotorParameters(float stiffness, float maxTorque);
     float motorSpeed() const { return m_motorSpeed; }
     float motorStiffness() const { return m_motorStiffness; }
     float maxMotorTorque() const { return m_maxMotorTorque; }

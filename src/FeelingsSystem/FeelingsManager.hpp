@@ -33,7 +33,7 @@ public:
     // Read-only access for consumers (render/audio/camera/etc.).
     const FeelingSnapshot& getSnapshot() const { return m_snapshot; }
 
-    bool isBlending() const { return m_isBlending; }
+    [[nodiscard]] bool isBlending() const noexcept { return m_isBlending; }
 private:
     FeelingSnapshot m_snapshot{};
     FeelingSnapshot m_start{};
@@ -42,27 +42,7 @@ private:
     float m_elapsedMs{0.0f};
     bool m_isBlending{false};
 
-    template <typename T>
-    static std::optional<T> lerpOptional(const std::optional<T>& from,
-                                         const std::optional<T>& to,
-                                         float t);
-    
 };
-
-
-// Template definitions
-template <typename T>
-inline std::optional<T> FeelingsManager::lerpOptional(const std::optional<T>& from,
-                                                      const std::optional<T>& to,
-                                                      float t) {
-    if (!to.has_value()) {
-        return (t < 1.0f) ? from : std::optional<T>{};
-    }
-    if (!from.has_value()) {
-        return to;
-    }
-    return from.value() + (to.value() - from.value()) * t;
-}
 }
 
 #endif //GL2D_FEELINGSMANAGER_HPP

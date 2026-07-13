@@ -4,6 +4,8 @@
 #include <cmath>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <stdexcept>
 
 #include "GameObjects/Components/ColliderComponent.hpp"
 #include "GameObjects/Entity.hpp"
@@ -20,6 +22,19 @@ namespace {
 constexpr float kEpsilon = 1e-5f;
 constexpr float kDefaultCastDistance = 1e6f;
 
+bool finite(const glm::vec2& value) {
+    return std::isfinite(value.x) && std::isfinite(value.y);
+}
+
+void validateCast(const glm::vec2& origin, const glm::vec2& direction,
+                  float maxDistance) {
+    if (!finite(origin) || !finite(direction) || !std::isfinite(maxDistance) ||
+        maxDistance < 0.0f) {
+        throw std::invalid_argument(
+            "Physics cast origin, direction, and distance must be finite; distance cannot be negative");
+    }
+}
+
 struct ColliderEntry {
     Entity* entity{nullptr};
     ACollider* collider{nullptr};
@@ -27,6 +42,7 @@ struct ColliderEntry {
 
 struct RayHitData {
     float t{0.0f};
+    float exitT{0.0f};
     glm::vec2 point{0.0f};
     glm::vec2 normal{0.0f};
 };
@@ -109,8 +125,9 @@ bool rayVsAabb(const glm::vec2& origin,
     }
 
     out.t = tMin;
+    out.exitT = tMax;
     out.point = origin + dir * tMin;
-    out.normal = normal;
+    out.normal = safeNormal(normal, -dir);
     return true;
 }
 
@@ -126,6 +143,7 @@ bool rayVsCircle(const glm::vec2& origin,
 
     if (c <= 0.0f) {
         out.t = 0.0f;
+        out.exitT = 0.0f;
         out.point = origin;
         out.normal = safeNormal(origin - center, -dir);
         return true; // origin starts inside the circle.
@@ -145,59 +163,10 @@ bool rayVsCircle(const glm::vec2& origin,
     }
 
     out.t = t;
+    out.exitT = t;
     out.point = origin + dir * t;
     out.normal = safeNormal(out.point - center, -dir);
     return true;
-}
-
-struct SegmentClosest {
-    float s{0.0f};
-    float t{0.0f};
-    glm::vec2 p{0.0f};
-    glm::vec2 q{0.0f};
-};
-
-SegmentClosest closestPointsOnSegments(const glm::vec2& p0,
-                                       const glm::vec2& p1,
-                                       const glm::vec2& q0,
-                                       const glm::vec2& q1) {
-    const glm::vec2 d1 = p1 - p0;
-    const glm::vec2 d2 = q1 - q0;
-    const glm::vec2 r = p0 - q0;
-
-    const float a = glm::dot(d1, d1);
-    const float e = glm::dot(d2, d2);
-    const float f = glm::dot(d2, r);
-
-    float s = 0.0f;
-    float t = 0.0f;
-
-    if (a <= kEpsilon && e <= kEpsilon) {
-        return SegmentClosest{s, t, p0, q0};
-    }
-
-    if (a <= kEpsilon) {
-        s = 0.0f;
-        t = glm::clamp(f / e, 0.0f, 1.0f);
-    } else {
-        const float c = glm::dot(d1, r);
-        if (e <= kEpsilon) {
-            s = glm::clamp(-c / a, 0.0f, 1.0f);
-            t = 0.0f;
-        } else {
-            const float b = glm::dot(d1, d2);
-            const float denom = a * e - b * b;
-            if (denom != 0.0f) {
-                s = glm::clamp((b * f - c * e) / denom, 0.0f, 1.0f);
-            }
-            t = glm::clamp((b * s + f) / e, 0.0f, 1.0f);
-            if (denom != 0.0f) {
-                s = glm::clamp((b * t - c) / a, 0.0f, 1.0f);
-            }
-        }
-    }
-
-    return SegmentClosest{s, t, p0 + d1 * s, q0 + d2 * t};
 }
 
 bool rayVsCapsule(const glm::vec2& origin,
@@ -207,33 +176,77 @@ bool rayVsCapsule(const glm::vec2& origin,
                   const glm::vec2& b,
                   float radius,
                   RayHitData& out) {
-    const glm::vec2 rayEnd = origin + dir * maxDistance;
-    const SegmentClosest closest = closestPointsOnSegments(a, b, origin, rayEnd);
-    const glm::vec2 delta = closest.p - closest.q;
-    const float dist2 = glm::dot(delta, delta);
-
-    if (dist2 > radius * radius) {
-        return false;
+    const glm::vec2 segment = b - a;
+    const float segmentLength = glm::length(segment);
+    if (segmentLength <= kEpsilon) {
+        return rayVsCircle(origin, dir, a, radius, maxDistance, out);
     }
 
-    const float distanceAlongRay = closest.t * maxDistance;
-    if (distanceAlongRay < 0.0f || distanceAlongRay > maxDistance) {
-        return false;
+    // A capsule is the union of an oriented rectangle and two end circles.
+    // Raycast each convex piece and retain the first impact. Unlike a
+    // closest-segment query, this reports the entry point rather than the
+    // point of closest approach along the ray.
+    const glm::vec2 tangent = segment / segmentLength;
+    const glm::vec2 normal{-tangent.y, tangent.x};
+    const glm::vec2 relativeOrigin = origin - a;
+    const glm::vec2 localOrigin{glm::dot(relativeOrigin, tangent),
+                                glm::dot(relativeOrigin, normal)};
+    const glm::vec2 localDirection{glm::dot(dir, tangent),
+                                   glm::dot(dir, normal)};
+
+    bool found = false;
+    float closest = maxDistance;
+    RayHitData candidate{};
+    if (rayVsAabb(localOrigin, localDirection,
+                  AABB{{0.0f, -radius}, {segmentLength, radius}},
+                  maxDistance, candidate)) {
+        closest = candidate.t;
+        out.t = candidate.t;
+        out.point = origin + dir * candidate.t;
+        out.normal = safeNormal(tangent * candidate.normal.x +
+                                normal * candidate.normal.y, -dir);
+        found = true;
     }
 
-    out.t = distanceAlongRay;
-    out.point = origin + dir * distanceAlongRay;
-    out.normal = safeNormal(out.point - closest.p, -dir);
-    return true;
+    for (const glm::vec2 center : {a, b}) {
+        if (rayVsCircle(origin, dir, center, radius, closest, candidate)) {
+            closest = candidate.t;
+            out = candidate;
+            found = true;
+        }
+    }
+    return found;
 }
 
-float refineHitDistance(float low,
-                        float high,
-                        int iterations,
-                        const std::function<bool(float)>& overlaps) {
-    float lo = std::max(0.0f, low);
-    float hi = std::max(lo, high);
-    for (int i = 0; i < iterations; ++i) {
+std::optional<float> firstOverlapDistance(
+        float broadphaseEntry, float broadphaseExit,
+        const std::function<bool(float)>& overlaps) {
+    if (overlaps(0.0f)) {
+        return 0.0f;
+    }
+    const float entry = std::max(0.0f, broadphaseEntry);
+    const float exit = std::max(entry, broadphaseExit);
+    constexpr int bracketSamples = 128;
+    float previous = entry;
+    std::optional<float> high;
+    for (int sample = 1; sample <= bracketSamples; ++sample) {
+        const float fraction = static_cast<float>(sample) /
+                               static_cast<float>(bracketSamples);
+        const float distance = entry + (exit - entry) * fraction;
+        if (overlaps(distance)) {
+            high = distance;
+            break;
+        }
+        previous = distance;
+    }
+    if (!high) {
+        return std::nullopt;
+    }
+
+    float lo = previous;
+    float hi = *high;
+    constexpr int refinementIterations = 16;
+    for (int i = 0; i < refinementIterations; ++i) {
         const float mid = 0.5f * (lo + hi);
         if (overlaps(mid)) {
             hi = mid;
@@ -244,16 +257,6 @@ float refineHitDistance(float low,
     return hi;
 }
 
-float extractRadiusFromCapsuleAABB(const CapsuleCollider& capsule) {
-    const AABB bounds = capsule.getAABB();
-    return 0.5f * std::min(bounds.width(), bounds.height());
-}
-
-float extractRadiusFromCircleAABB(const CircleCollider& circle) {
-    const AABB bounds = circle.getAABB();
-    return 0.5f * std::min(bounds.width(), bounds.height());
-}
-
 glm::vec2 closestPointOnSegment(const glm::vec2& a, const glm::vec2& b, const glm::vec2& p) {
     const glm::vec2 ab = b - a;
     const float abLen2 = glm::dot(ab, ab);
@@ -262,14 +265,6 @@ glm::vec2 closestPointOnSegment(const glm::vec2& a, const glm::vec2& b, const gl
     return a + ab * t;
 }
 
-std::unique_ptr<Hit> dispatchWithoutTriggerSideEffects(ACollider& moving, ACollider& target) {
-    const bool wasTriggered = target.hasTriggered();
-    auto hit = CollisionDispatcher::dispatch(moving, target);
-    if (!wasTriggered && target.hasTriggered()) {
-        target.clearTriggerState();
-    }
-    return hit;
-}
 } // namespace
 
 namespace PhysicsCasts {
@@ -279,6 +274,7 @@ CastHit rayCast(const glm::vec2& origin,
                 float maxDistance,
                 const std::vector<std::unique_ptr<Entity>>& entities,
                 CastFilter filter) {
+    validateCast(origin, direction, maxDistance);
     CastHit best{};
     const float dirLen = glm::length(direction);
     if (dirLen < kEpsilon) {
@@ -308,7 +304,7 @@ CastHit rayCast(const glm::vec2& origin,
                 if (circle) {
                     const AABB bounds = circle->getAABB();
                     const glm::vec2 center = bounds.center();
-                    const float radius = extractRadiusFromCircleAABB(*circle);
+                    const float radius = circle->getWorldRadius();
                     if (rayVsCircle(origin, dir, center, radius, closest, data)) {
                         closest = data.t;
                         best = CastHit{true, data.point, data.normal, data.t, entry.entity, entry.collider};
@@ -319,7 +315,7 @@ CastHit rayCast(const glm::vec2& origin,
             case ColliderType::CAPSULE: {
                 auto* cap = dynamic_cast<CapsuleCollider*>(entry.collider);
                 if (cap) {
-                    const float radius = extractRadiusFromCapsuleAABB(*cap);
+                    const float radius = cap->getWorldRadius();
                     if (rayVsCapsule(origin, dir, closest, cap->getWorldA(), cap->getWorldB(), radius, data)) {
                         closest = data.t;
                         best = CastHit{true, data.point, data.normal, data.t, entry.entity, entry.collider};
@@ -340,6 +336,7 @@ CastHit boxCast(const AABB& box,
                 float maxDistance,
                 const std::vector<std::unique_ptr<Entity>>& entities,
                 CastFilter filter) {
+    validateCast(box.center(), direction, maxDistance);
     CastHit best{};
     const float dirLen = glm::length(direction);
     if (dirLen < kEpsilon) {
@@ -373,27 +370,28 @@ CastHit boxCast(const AABB& box,
 
         const auto overlapsAt = [&](float dist) {
             movingTransform.setPos(dir * dist);
-            auto hit = dispatchWithoutTriggerSideEffects(movingCollider, *entry.collider);
+            auto hit = CollisionDispatcher::dispatch(movingCollider, *entry.collider);
             return hit && hit->collided;
         };
 
-        const float refined = refineHitDistance(0.0f, data.t, 4, overlapsAt);
-        if (refined > closest || refined > maxDist) {
+        const std::optional<float> refined = firstOverlapDistance(
+            data.t, data.exitT, overlapsAt);
+        if (!refined || *refined > closest || *refined > maxDist) {
             continue;
         }
 
-        movingTransform.setPos(dir * refined);
-        auto hit = dispatchWithoutTriggerSideEffects(movingCollider, *entry.collider);
+        movingTransform.setPos(dir * *refined);
+        auto hit = CollisionDispatcher::dispatch(movingCollider, *entry.collider);
         if (!hit || !hit->collided) {
             continue;
         }
 
-        closest = refined;
+        closest = *refined;
         const glm::vec2 normal = safeNormal(hit->normal, data.normal);
         const glm::vec2 point = (glm::dot(hit->contactPoint, hit->contactPoint) > 0.0f)
                                 ? hit->contactPoint
                                 : data.point;
-        best = CastHit{true, point, normal, refined, entry.entity, entry.collider};
+        best = CastHit{true, point, normal, *refined, entry.entity, entry.collider};
     }
 
     return best;
@@ -406,6 +404,11 @@ CastHit capsuleCast(const glm::vec2& a,
                     float maxDistance,
                     const std::vector<std::unique_ptr<Entity>>& entities,
                     CastFilter filter) {
+    validateCast(a, direction, maxDistance);
+    if (!finite(b) || !std::isfinite(radius) || radius < 0.0f) {
+        throw std::invalid_argument(
+            "Capsule cast endpoints and radius must be finite; radius cannot be negative");
+    }
     CastHit best{};
     const float dirLen = glm::length(direction);
     if (dirLen < kEpsilon) {
@@ -441,27 +444,28 @@ CastHit capsuleCast(const glm::vec2& a,
 
         const auto overlapsAt = [&](float dist) {
             movingTransform.setPos(dir * dist);
-            auto hit = dispatchWithoutTriggerSideEffects(movingCapsule, *entry.collider);
+            auto hit = CollisionDispatcher::dispatch(movingCapsule, *entry.collider);
             return hit && hit->collided;
         };
 
-        const float refined = refineHitDistance(0.0f, data.t, 4, overlapsAt);
-        if (refined > closest || refined > maxDist) {
+        const std::optional<float> refined = firstOverlapDistance(
+            data.t, data.exitT, overlapsAt);
+        if (!refined || *refined > closest || *refined > maxDist) {
             continue;
         }
 
-        movingTransform.setPos(dir * refined);
-        auto hit = dispatchWithoutTriggerSideEffects(movingCapsule, *entry.collider);
+        movingTransform.setPos(dir * *refined);
+        auto hit = CollisionDispatcher::dispatch(movingCapsule, *entry.collider);
         if (!hit || !hit->collided) {
             continue;
         }
 
-        closest = refined;
+        closest = *refined;
         const glm::vec2 normal = safeNormal(hit->normal, data.normal);
         const glm::vec2 point = (glm::dot(hit->contactPoint, hit->contactPoint) > 0.0f)
                                 ? hit->contactPoint
                                 : data.point;
-        best = CastHit{true, point, normal, refined, entry.entity, entry.collider};
+        best = CastHit{true, point, normal, *refined, entry.entity, entry.collider};
     }
 
     return best;
@@ -472,7 +476,11 @@ std::vector<CastHit> overlapCircle(const glm::vec2& center,
                                    const std::vector<std::unique_ptr<Entity>>& entities,
                                    CastFilter filter) {
     std::vector<CastHit> hits;
-    if (radius <= 0.0f) return hits;
+    if (!finite(center) || !std::isfinite(radius) || radius < 0.0f) {
+        throw std::invalid_argument(
+            "Circle overlap center and radius must be finite; radius cannot be negative");
+    }
+    if (radius == 0.0f) return hits;
 
     const auto colliders = gatherColliders(entities);
     for (const auto& entry : colliders) {
@@ -486,8 +494,32 @@ std::vector<CastHit> overlapCircle(const glm::vec2& center,
                 const float dist2 = glm::dot(diff, diff);
                 if (dist2 <= radius * radius) {
                     const float dist = std::sqrt(std::max(dist2, 0.0f));
-                    const glm::vec2 n = safeNormal(diff, glm::vec2{1.0f, 0.0f});
-                    hits.push_back(CastHit{true, closest, n, radius - dist, entry.entity, entry.collider});
+                    glm::vec2 normal = safeNormal(diff, glm::vec2{1.0f, 0.0f});
+                    glm::vec2 contact = closest;
+                    float penetration = radius - dist;
+                    if (dist <= kEpsilon) {
+                        const float left = center.x - box.getMin().x;
+                        const float right = box.getMax().x - center.x;
+                        const float down = center.y - box.getMin().y;
+                        const float up = box.getMax().y - center.y;
+                        const float nearest = std::min({left, right, down, up});
+                        penetration = radius + nearest;
+                        if (nearest == left) {
+                            normal = {-1.0f, 0.0f};
+                            contact = {box.getMin().x, center.y};
+                        } else if (nearest == right) {
+                            normal = {1.0f, 0.0f};
+                            contact = {box.getMax().x, center.y};
+                        } else if (nearest == down) {
+                            normal = {0.0f, -1.0f};
+                            contact = {center.x, box.getMin().y};
+                        } else {
+                            normal = {0.0f, 1.0f};
+                            contact = {center.x, box.getMax().y};
+                        }
+                    }
+                    hits.push_back(CastHit{true, contact, normal, penetration,
+                                           entry.entity, entry.collider});
                 }
                 break;
             }
@@ -496,7 +528,7 @@ std::vector<CastHit> overlapCircle(const glm::vec2& center,
                 if (!circle) break;
                 const AABB bounds = circle->getAABB();
                 const glm::vec2 otherCenter = bounds.center();
-                const float otherRadius = extractRadiusFromCircleAABB(*circle);
+                const float otherRadius = circle->getWorldRadius();
                 const glm::vec2 diff = center - otherCenter;
                 const float dist = glm::length(diff);
                 const float sumR = radius + otherRadius;
@@ -512,7 +544,7 @@ std::vector<CastHit> overlapCircle(const glm::vec2& center,
                 if (!cap) break;
                 const glm::vec2 a = cap->getWorldA();
                 const glm::vec2 bPt = cap->getWorldB();
-                const float capRadius = extractRadiusFromCapsuleAABB(*cap);
+                const float capRadius = cap->getWorldRadius();
                 const glm::vec2 closest = closestPointOnSegment(a, bPt, center);
                 const glm::vec2 diff = center - closest;
                 const float dist = glm::length(diff);

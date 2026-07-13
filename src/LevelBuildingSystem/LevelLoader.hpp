@@ -22,7 +22,8 @@ public:
     // Load from an already-parsed LevelData (useful for editor/testing).
     static Level loadFromData(const LevelData& data);
 
-    // Stub for file-based load; integrate a JSON loader later.
+    // Parse, validate, and instantiate a JSON level. Invalid references and
+    // malformed runtime data fail with a contextual LevelException.
     static Level loadFromFile(const std::string& path);
 };
 

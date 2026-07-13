@@ -5,9 +5,8 @@
 class AABB {
 public:
   AABB() : m_min(0.0f), m_max(0.0f) {}
-  virtual ~AABB() = default;
-  AABB(const glm::vec2 &minPoint, const glm::vec2 &maxPoint)
-      : m_min(minPoint), m_max(maxPoint) {}
+  ~AABB() = default;
+  AABB(const glm::vec2 &minPoint, const glm::vec2 &maxPoint);
   float width() const;
   float height() const;
   glm::vec2 getMin() const;

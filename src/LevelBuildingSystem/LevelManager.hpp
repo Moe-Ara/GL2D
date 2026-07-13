@@ -7,7 +7,7 @@
 
 #include <memory>
 #include <string>
-#include <optional>
+#include <utility>
 #include "Level.hpp"
 #include "LevelLoader.hpp"
 
@@ -23,14 +23,20 @@ public:
 
     bool loadLevel(const std::string& path);
     void unloadLevel();
-    void update(double dt);
 
-    const Level* currentLevel() const { return m_current.get(); }
+    [[nodiscard]] const Level* currentLevel() const noexcept {
+        return m_current.get();
+    }
+    [[nodiscard]] const std::string& lastError() const noexcept {
+        return m_lastError;
+    }
+    [[nodiscard]] std::unique_ptr<Level> takeCurrent() noexcept {
+        return std::move(m_current);
+    }
 
 private:
     std::unique_ptr<Level> m_current{};
-    std::optional<std::string> m_nextPath{};
-    double m_transitionTimer{0.0};
+    std::string m_lastError{};
 };
 
 #endif //GL2D_LEVELMANAGER_HPP

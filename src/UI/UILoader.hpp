@@ -17,7 +17,8 @@ namespace UI {
 
 class UILoader {
 public:
-    using TextureResolver = std::function<GameObjects::Texture*(const std::string& id)>;
+    using TextureResolver =
+        std::function<std::shared_ptr<GameObjects::Texture>(const std::string& id)>;
 
     // Loads a UIScreen from a JSON file. TextureResolver can map string ids/paths to textures (nullable).
     static UIScreen loadFromFile(const std::string& path, TextureResolver resolver = {});

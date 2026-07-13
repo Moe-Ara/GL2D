@@ -1,9 +1,12 @@
 #ifndef AI_PERCEPTION_HPP
 #define AI_PERCEPTION_HPP
 
-#include <glm/glm.hpp>
-#include <vector>
+#include <cstdint>
 #include <memory>
+#include <vector>
+
+#include <glm/glm.hpp>
+
 class Entity;
 
 namespace AI {
@@ -13,7 +16,8 @@ bool hasLineOfSight(const glm::vec2& from,
                     const glm::vec2& to,
                     const std::vector<std::unique_ptr<Entity>>& entities,
                     uint32_t layerMask = 0xFFFFFFFFu,
-                    const Entity* ignore = nullptr);
+                    const Entity* ignore = nullptr,
+                    const Entity* target = nullptr);
 
 // Hearing: returns entities (if out vector provided) within radius, respecting layer mask and ignoring a specific entity.
 bool canHear(const glm::vec2& listener,

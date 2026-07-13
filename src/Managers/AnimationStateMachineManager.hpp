@@ -6,8 +6,11 @@
 #define GL2D_ANIMATIONSTATEMACHINEMANAGER_HPP
 
 
-#include <unordered_map>
 #include "Graphics/Animation/AnimationStateMachine.hpp"
+
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 class AnimationStateMachineManager {
 public:
@@ -22,11 +25,16 @@ public:
     AnimationStateMachineManager(AnimationStateMachineManager &&other) = delete;
 
     AnimationStateMachineManager &operator=(AnimationStateMachineManager &&other) = delete;
-    static void registerAnimationSM(const std::string& id, Graphics::AnimationStateMachine* animSM);
-    static Graphics::AnimationStateMachine* get(const std::string& id);
+    static void registerStateMachine(
+        const std::string& id,
+        const std::shared_ptr<Graphics::AnimationStateMachine>& stateMachine);
+    static std::shared_ptr<Graphics::AnimationStateMachine> get(const std::string& id);
     static bool contains(const std::string& id);
+    static bool unregisterStateMachine(const std::string& id);
+    static void clear() noexcept;
 private:
-    static std::unordered_map<std::string,Graphics::AnimationStateMachine*> m_AnimationSMs;
+    static std::unordered_map<
+        std::string, std::weak_ptr<Graphics::AnimationStateMachine>> s_stateMachines;
 };
 
 

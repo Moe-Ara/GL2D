@@ -8,6 +8,7 @@
 #include "GameObjects/Entity.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Components/TriggerComponent.hpp"
+#include "GameObjects/Components/ColliderComponent.hpp"
 #include "GameObjects/Components/TilemapComponent.hpp"
 #include "GameObjects/Components/LightingComponent.hpp"
 #include "GameObjects/Prefabs/PrefabCatalouge.hpp"
@@ -15,13 +16,79 @@
 #include "Managers/TilesetManager.hpp"
 #include "Utils/SimpleJson.hpp"
 #include "Exceptions/SubsystemExceptions.hpp"
+#include "Physics/Collision/AABBCollider.hpp"
+#include "Physics/Collision/CircleCollider.hpp"
+#include <algorithm>
+#include <cctype>
+#include <cmath>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <fstream>
 #include <sstream>
+#include <unordered_set>
+
+namespace {
+bool finite(const glm::vec2& value) {
+    return std::isfinite(value.x) && std::isfinite(value.y);
+}
+
+std::string lower(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](unsigned char character) {
+                       return static_cast<char>(std::tolower(character));
+                   });
+    return value;
+}
+
+TriggerActivationMode activationMode(TriggerActivation activation) {
+    switch (activation) {
+        case TriggerActivation::OnEnter:
+            return TriggerActivationMode::OnEnter;
+        case TriggerActivation::OnExit:
+            return TriggerActivationMode::OnExit;
+        case TriggerActivation::WhileInside:
+            return TriggerActivationMode::WhileInside;
+        case TriggerActivation::Manual:
+            return TriggerActivationMode::Manual;
+    }
+    throw Engine::LevelException("Level trigger has an invalid activation mode");
+}
+
+std::unique_ptr<ACollider> makeTriggerCollider(const LevelTrigger& trigger) {
+    const std::string shape = lower(trigger.shape.type);
+    if (shape == "aabb" || shape == "box") {
+        if (!finite(trigger.shape.size) || trigger.shape.size.x <= 0.0f ||
+            trigger.shape.size.y <= 0.0f) {
+            throw Engine::LevelException(
+                "Level trigger '" + trigger.id +
+                "' requires a positive finite AABB size");
+        }
+        const glm::vec2 halfExtents = trigger.shape.size * 0.5f;
+        return std::make_unique<AABBCollider>(-halfExtents, halfExtents);
+    }
+    if (shape == "circle") {
+        if (!std::isfinite(trigger.shape.radius) ||
+            trigger.shape.radius <= 0.0f) {
+            throw Engine::LevelException(
+                "Level trigger '" + trigger.id +
+                "' requires a positive finite circle radius");
+        }
+        return std::make_unique<CircleCollider>(trigger.shape.radius);
+    }
+    throw Engine::LevelException(
+        "Level trigger '" + trigger.id + "' uses unsupported shape type: " +
+        trigger.shape.type);
+}
+} // namespace
 
 Level LevelLoader::loadFromData(const LevelData &data) {
+    if (data.metadata.schemaVersion != 1) {
+        throw Engine::LevelException(
+            "Level '" + data.metadata.name +
+            "' uses unsupported schema version " +
+            std::to_string(data.metadata.schemaVersion) + " (expected 1)");
+    }
     Level level{};
     level.id = data.metadata.name;
     level.camera = data.camera;
@@ -32,8 +99,9 @@ Level LevelLoader::loadFromData(const LevelData &data) {
     placements.reserve(data.instances.size());
     for (const auto &instance : data.instances) {
         if (!PrefabCatalouge::contains(instance.prefabId)) {
-            // Skip unknown prefab
-            continue;
+            throw Engine::LevelException(
+                "Level '" + data.metadata.name +
+                "' references unknown prefab: " + instance.prefabId);
         }
         PlacedEntitySpec spec{};
         spec.prefabId = instance.prefabId;
@@ -53,8 +121,9 @@ Level LevelLoader::loadFromData(const LevelData &data) {
     for (const auto &layer : data.tileLayers) {
         auto tilemapData = TilemapManager::get(layer.tilemapId);
         if (!tilemapData) {
-            // Skip missing tilemaps
-            continue;
+            throw Engine::LevelException(
+                "Level '" + data.metadata.name +
+                "' references unknown tilemap: " + layer.tilemapId);
         }
         if (tilemapData->tilesetId.empty() && !layer.tilesetId.empty()) {
             tilemapData->tilesetId = layer.tilesetId;
@@ -67,24 +136,44 @@ Level LevelLoader::loadFromData(const LevelData &data) {
         level.entities.push_back(std::move(tileEntity));
     }
 
-    // Attach triggers separately (not tied to prefab instantiation here).
+    // Trigger geometry participates in the same exact collision path as all
+    // other trigger colliders. TriggerComponent owns only activation metadata.
+    std::unordered_set<std::string> triggerIds;
+    triggerIds.reserve(data.triggers.size());
     for (const auto &trigger : data.triggers) {
+        if (trigger.id.empty()) {
+            throw Engine::LevelException("Level trigger id cannot be empty");
+        }
+        if (!triggerIds.insert(trigger.id).second) {
+            throw Engine::LevelException(
+                "Level contains duplicate trigger id: " + trigger.id);
+        }
+        if (trigger.event.empty()) {
+            throw Engine::LevelException(
+                "Level trigger '" + trigger.id + "' has an empty event id");
+        }
+        if (!finite(trigger.shape.pos)) {
+            throw Engine::LevelException(
+                "Level trigger '" + trigger.id +
+                "' has a non-finite position");
+        }
+        for (const auto& [name, value] : trigger.params) {
+            if (name.empty() || !std::isfinite(value)) {
+                throw Engine::LevelException(
+                    "Level trigger '" + trigger.id +
+                    "' has an invalid parameter");
+            }
+        }
+
         auto trigEntity = std::make_unique<Entity>();
         auto &transform = trigEntity->addComponent<TransformComponent>();
         transform.setPosition(trigger.shape.pos);
-        transform.setScale(trigger.shape.size);
 
-        auto &triggerComp = trigEntity->addComponent<TriggerComponent>();
-        triggerComp.position = trigger.shape.pos;
-        triggerComp.size = trigger.shape.size;
-        triggerComp.eventId = trigger.event;
-        triggerComp.params = trigger.params;
-        switch (trigger.activation) {
-            case TriggerActivation::OnEnter: triggerComp.activation = TriggerActivationMode::OnEnter; break;
-            case TriggerActivation::OnExit: triggerComp.activation = TriggerActivationMode::OnExit; break;
-            case TriggerActivation::WhileInside: triggerComp.activation = TriggerActivationMode::WhileInside; break;
-            case TriggerActivation::Manual: triggerComp.activation = TriggerActivationMode::Manual; break;
-        }
+        trigEntity->addComponent<TriggerComponent>(
+            trigger.event, activationMode(trigger.activation), trigger.params);
+        auto& collider = trigEntity->addComponent<ColliderComponent>(
+            makeTriggerCollider(trigger));
+        collider.setTrigger(true);
 
         level.entities.push_back(std::move(trigEntity));
     }
@@ -276,7 +365,12 @@ Level LevelLoader::loadFromFile(const std::string &path) {
                 if (act == "OnEnter") trig.activation = TriggerActivation::OnEnter;
                 else if (act == "OnExit") trig.activation = TriggerActivation::OnExit;
                 else if (act == "WhileInside") trig.activation = TriggerActivation::WhileInside;
-                else trig.activation = TriggerActivation::Manual;
+                else if (act == "Manual") trig.activation = TriggerActivation::Manual;
+                else {
+                    throw Engine::LevelException(
+                        "Level trigger '" + trig.id +
+                        "' has unknown activation: " + act);
+                }
             }
             if (entry.hasKey("shape")) {
                 const auto &shape = entry.at("shape");

@@ -21,6 +21,7 @@ struct CastHit {
     bool hit{false};
     glm::vec2 point{0.0f};
     glm::vec2 normal{0.0f};
+    // Travel distance for casts; penetration depth for overlap queries.
     float distance{0.0f};
     Entity* entity{nullptr};
     ACollider* collider{nullptr};

@@ -9,9 +9,12 @@
 #include "GameObjects/IComponent.hpp"
 #include "Graphics/Animation/AnimationStateMachine.hpp"
 
+#include <memory>
+
 class AnimationStateMachineComponent: public IUpdatableComponent{
 public:
-    explicit AnimationStateMachineComponent(Graphics::AnimationStateMachine* stateMachine = nullptr);
+    explicit AnimationStateMachineComponent(
+        std::shared_ptr<Graphics::AnimationStateMachine> stateMachine = nullptr);
     ~AnimationStateMachineComponent() override = default;
 
     AnimationStateMachineComponent(const AnimationStateMachineComponent &other) = delete;
@@ -22,7 +25,7 @@ public:
     void update(Entity& owner, double dt) override;
 
 private:
-    Graphics::AnimationStateMachine* m_stateMachine{nullptr};
+    std::shared_ptr<Graphics::AnimationStateMachine> m_stateMachine{nullptr};
 };
 
 

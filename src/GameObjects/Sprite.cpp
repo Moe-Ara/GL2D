@@ -6,14 +6,13 @@
 namespace GameObjects {
 
 Sprite::Sprite(glm::vec2 position, glm::vec2 size, glm::vec3 color)
-    : m_position(position), m_size(size),
-      m_color(glm::vec4(color, 1.0f)), m_texture(nullptr),
-      m_uvCoords(0, 0, 1, 1) {}
+    : m_texture(nullptr), m_position(position), m_size(size),
+      m_uvCoords(0, 0, 1, 1), m_color(glm::vec4(color, 1.0f)) {}
 
 Sprite::Sprite(std::shared_ptr<Texture> texture, glm::vec2 position,
                glm::vec2 size)
     : m_texture(std::move(texture)), m_position(position), m_size(size),
-      m_color(glm::vec4(1.0f)), m_uvCoords(0, 0, 1, 1) {}
+      m_uvCoords(0, 0, 1, 1), m_color(glm::vec4(1.0f)) {}
 
 Sprite::Sprite(std::shared_ptr<Texture> texture, glm::vec2 position,
                glm::vec2 size, int row, int column, int totalRows,

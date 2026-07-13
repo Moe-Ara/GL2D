@@ -2,6 +2,9 @@
 
 #include <glm/vec2.hpp>
 
+#include <limits>
+#include <stdexcept>
+
 #include "Physics/RigidBody.hpp"
 #include "Physics/Collision/ACollider.hpp"
 #include "Physics/Collision/AABB.hpp"
@@ -48,6 +51,55 @@ BOOST_AUTO_TEST_CASE(static_body_ignores_forces) {
 
     BOOST_TEST(body.getVelocity().x == 0.0f);
     BOOST_TEST(body.getVelocity().y == 0.0f);
+}
+
+BOOST_AUTO_TEST_CASE(kinematic_body_integrates_prescribed_velocity) {
+    RigidBody body(0.0f, RigidBodyType::KINEMATIC);
+    body.setVelocity({3.0f, -2.0f});
+    body.setAngularVelocity(0.5f);
+    body.integrate(2.0f);
+
+    BOOST_TEST(body.getPosition().x == 6.0f);
+    BOOST_TEST(body.getPosition().y == -4.0f);
+    BOOST_TEST(body.getRotation() == 1.0f);
+    BOOST_TEST(body.getInvMass() == 0.0f);
+}
+
+BOOST_AUTO_TEST_CASE(exponential_damping_is_step_rate_independent) {
+    RigidBody oneStep(1.0f, RigidBodyType::DYNAMIC);
+    RigidBody tenSteps(1.0f, RigidBodyType::DYNAMIC);
+    oneStep.setVelocity({10.0f, 0.0f});
+    tenSteps.setVelocity({10.0f, 0.0f});
+    oneStep.setLinearDamping(2.0f);
+    tenSteps.setLinearDamping(2.0f);
+
+    oneStep.integrate(1.0f);
+    for (int i = 0; i < 10; ++i) {
+        tenSteps.integrate(0.1f);
+    }
+
+    BOOST_TEST(oneStep.getVelocity().x == tenSteps.getVelocity().x,
+               boost::test_tools::tolerance(0.0001f));
+}
+
+BOOST_AUTO_TEST_CASE(zero_delta_does_not_consume_accumulated_force) {
+    RigidBody body(1.0f, RigidBodyType::DYNAMIC);
+    body.applyForce({2.0f, 0.0f});
+    body.integrate(0.0f);
+    body.integrate(1.0f);
+    BOOST_TEST(body.getVelocity().x == 2.0f);
+}
+
+BOOST_AUTO_TEST_CASE(invalid_body_state_is_rejected_early) {
+    BOOST_CHECK_THROW(RigidBody(0.0f, RigidBodyType::DYNAMIC),
+                      std::invalid_argument);
+    RigidBody body(1.0f, RigidBodyType::DYNAMIC);
+    BOOST_CHECK_THROW(body.setMass(0.0f), std::invalid_argument);
+    BOOST_CHECK_THROW(body.setLinearDamping(-1.0f), std::invalid_argument);
+    BOOST_CHECK_THROW(
+        body.setVelocity({std::numeric_limits<float>::quiet_NaN(), 0.0f}),
+        std::invalid_argument);
+    BOOST_CHECK_THROW(body.integrate(-0.1f), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(force_generators_remove_themselves) {

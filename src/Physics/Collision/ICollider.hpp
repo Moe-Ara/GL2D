@@ -11,7 +11,9 @@
 #include <memory>
 struct Hit {
     bool collided = false;
-    glm::vec2 normal{0, 0};      // Expected to be normalized when collided is true
+    // Unit vector pointing from collider B toward collider A. Moving A by
+    // normal * penetration separates the pair returned by dispatch(A, B).
+    glm::vec2 normal{0, 0};
     float penetration = 0.f;     // Non-negative depth along the collision normal
     glm::vec2 contactPoint{0, 0};
 };

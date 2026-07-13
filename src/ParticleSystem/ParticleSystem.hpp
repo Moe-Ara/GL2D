@@ -5,6 +5,9 @@
 #ifndef GL2D_PARTICLESYSTEM_HPP
 #define GL2D_PARTICLESYSTEM_HPP
 
+#include <memory>
+#include <vector>
+
 #include "ParticleEmitter.hpp"
 
 namespace Rendering{
@@ -12,9 +15,9 @@ namespace Rendering{
 }
 class ParticleSystem {
 public:
-    ParticleSystem();
+    ParticleSystem() = default;
 
-    virtual ~ParticleSystem();
+    ~ParticleSystem() = default;
 
     ParticleSystem(const ParticleSystem &other) = delete;
 

@@ -13,8 +13,12 @@
 #include <vector>
 
 #include "Engine/Scene.hpp"
+#include "Engine/Timeline.hpp"
+#include "ECS/Entity.hpp"
+#include "FeelingsSystem/FeelingsController.hpp"
 #include "GameObjects/Sprite.hpp"
 #include "Graphics/Camera/Camera.hpp"
+#include "Graphics/Camera/CameraDirector.hpp"
 #include "InputSystem/InputService.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "Graphics/Window.hpp"
@@ -46,21 +50,15 @@ public:
     void queueFramebufferSize(int width, int height);
 
 private:
-    struct BackgroundLayerInstance {
-        std::vector<TransformComponent*> transforms;
-        glm::vec2 basePosition{0.0f};
-        float parallax{0.0f};
-        glm::vec2 baseCenter{0.0f};
-        float tileWidth{0.0f};
-        int tileCount{0};
-    };
-
     void updateProjection();
     void updateCameraTargetOffset();
     void processPendingFramebufferResize();
     void loadBackgroundChapter(size_t index);
     void clearBackgroundChapter();
-    void updateBackgroundParallax();
+    void spawnChapterTriggers();
+    void requestChapter(size_t index);
+    void loadFeelings();
+    void applyChapterMood(size_t chapterIndex);
     glm::vec2 cameraCenter() const;
 
     std::unique_ptr<Graphics::Window> m_window;
@@ -70,7 +68,10 @@ private:
     std::unique_ptr<InputController> m_inputController;
     std::unique_ptr<SceneBuilder> m_sceneBuilder;
     std::unique_ptr<Camera> m_camera;
+    CameraDirector m_cameraDirector;
+    Engine::Timeline m_openingTimeline;
     Scene m_scene;
+    std::unique_ptr<FeelingsSystem::FeelingsController> m_feelingsController;
     std::shared_ptr<GameObjects::Sprite> m_groundSprite;
 
     static constexpr float WORLD_WIDTH = 1920.0f;
@@ -78,13 +79,13 @@ private:
     glm::vec2 m_spriteSize{400.0f, 400.0f};
     glm::vec4 m_clearColor{0.05f, 0.05f, 0.1f, 1.0f};
     glm::mat4 m_projection{1.0f};
-    float m_playbackSpeed{0.5f};
+    float m_playbackSpeed{1.0f};
     glm::ivec2 m_pendingFramebufferSize{0, 0};
     bool m_hasPendingFramebufferSize{false};
     bool m_needsBackgroundReload{false};
-    std::vector<Entity*> m_backgroundEntities;
-    std::vector<BackgroundLayerInstance> m_backgroundLayers;
+    std::vector<ECS::Entity> m_backgroundEntities;
     size_t m_currentBackgroundChapter{0};
+    bool m_chapterTriggersSpawned{false};
 };
 
 #endif //GL2D_GAME_HPP

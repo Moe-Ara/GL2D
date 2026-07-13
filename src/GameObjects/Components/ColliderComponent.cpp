@@ -4,15 +4,16 @@
 
 #include "ColliderComponent.hpp"
 
-#include <GL/glew.h>
 #include <algorithm>
+#include <array>
+#include <cmath>
 
 #include "GameObjects/Components/TransformComponent.hpp"
-#include "GameObjects/Components/ColliderComponent.hpp"
-#include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Components/SpriteComponent.hpp"
+#include "GameObjects/Components/TriggerComponent.hpp"
 #include "GameObjects/Entity.hpp"
 #include "Physics/Collision/CapsuleCollider.hpp"
+#include "RenderingSystem/DebugDraw2D.hpp"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/vec2.hpp>
@@ -104,12 +105,15 @@ bool ColliderComponent::fitToSprite(Entity &owner, float padding) {
 
     if (auto *capsule = dynamic_cast<CapsuleCollider *>(m_collider.get())) {
         const glm::vec2 usedSize = m_capsuleOverrideActive ? m_capsuleSizeOverride : size;
-        const glm::vec2 halfHeight = glm::vec2{0.0f, usedSize.y * 0.5f};
+        const float width = std::max(usedSize.x + padding * 2.0f, 0.0f);
+        const float height = std::max(usedSize.y + padding * 2.0f, 0.0f);
+        const float radius = std::max(0.5f * std::min(width, height), 1.0f);
+        const float halfSegment = std::max(height * 0.5f - radius, 0.0f);
         const glm::vec2 center = size * 0.5f;
         const glm::vec2 offset = m_capsuleOffsetOverrideActive ? m_capsuleOffsetOverride : glm::vec2{0.0f};
-        capsule->setRadius(std::max(0.5f * usedSize.x, 1.0f));
-        capsule->setLocalA(-halfHeight);
-        capsule->setLocalB(halfHeight);
+        capsule->setRadius(radius);
+        capsule->setLocalA({0.0f, -halfSegment});
+        capsule->setLocalB({0.0f, halfSegment});
         capsule->setLocalOffset(center + offset);
         return true;
     }
@@ -118,12 +122,33 @@ bool ColliderComponent::fitToSprite(Entity &owner, float padding) {
 }
 
 void ColliderComponent::invokeTriggerEnter(Entity &owner, Entity &other) {
+    if (m_isTrigger) {
+        if (auto* trigger = owner.getComponent<TriggerComponent>()) {
+            trigger->handleEnter(owner, other);
+        }
+    }
     if (m_onTriggerEnter) {
         m_onTriggerEnter(owner, other);
     }
 }
 
+void ColliderComponent::invokeTriggerStay(Entity& owner, Entity& other) {
+    if (m_isTrigger) {
+        if (auto* trigger = owner.getComponent<TriggerComponent>()) {
+            trigger->handleStay(owner, other);
+        }
+    }
+    if (m_onTriggerStay) {
+        m_onTriggerStay(owner, other);
+    }
+}
+
 void ColliderComponent::invokeTriggerExit(Entity &owner, Entity &other) {
+    if (m_isTrigger) {
+        if (auto* trigger = owner.getComponent<TriggerComponent>()) {
+            trigger->handleExit(owner, other);
+        }
+    }
     if (m_onTriggerExit) {
         m_onTriggerExit(owner, other);
     }
@@ -157,79 +182,59 @@ std::unique_ptr<ACollider> ColliderComponent::createCollider(ColliderType type) 
     }
 }
 
-void ColliderComponent::debugDraw(const glm::mat4 &viewProj, const glm::vec3 &color) const {
+void ColliderComponent::debugDraw(Rendering::Renderer& renderer,
+                                  const glm::vec4& color) const {
     if (!m_collider) return;
 
-    glUseProgram(0);
-    glMatrixMode(GL_PROJECTION);
-    glLoadMatrixf(&viewProj[0][0]);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glColor3f(color.r, color.g, color.b);
-    glLineWidth(1.0f);
+    constexpr float thickness = 1.0f;
 
     switch (m_collider->getType()) {
         case ColliderType::AABB: {
             const AABB aabb = m_collider->getAABB();
-            const glm::vec2 min = aabb.getMin();
-            const glm::vec2 max = aabb.getMax();
-            glBegin(GL_LINE_LOOP);
-            glVertex2f(min.x, min.y);
-            glVertex2f(max.x, min.y);
-            glVertex2f(max.x, max.y);
-            glVertex2f(min.x, max.y);
-            glEnd();
+            Rendering::DebugDraw2D::rectangle(renderer, aabb.getMin(), aabb.getMax(),
+                                              thickness, color);
             break;
         }
         case ColliderType::CIRCLE: {
-            const AABB aabb = m_collider->getAABB();
-            const glm::vec2 center = aabb.center();
-            const float radius = 0.5f * std::min(aabb.width(), aabb.height());
-            const int segments = 24;
-            glBegin(GL_LINE_LOOP);
-            for (int i = 0; i < segments; ++i) {
-                const float theta = (static_cast<float>(i) / segments) * 2.0f * 3.1415926f;
-                glVertex2f(center.x + std::cos(theta) * radius, center.y + std::sin(theta) * radius);
-            }
-            glEnd();
+            const auto* circle = dynamic_cast<const CircleCollider*>(m_collider.get());
+            if (!circle) break;
+            Rendering::DebugDraw2D::circle(renderer, circle->getWorldCenter(),
+                                           circle->getWorldRadius(), thickness, color, 24);
             break;
         }
         case ColliderType::CAPSULE: {
-            auto *cap = dynamic_cast<CapsuleCollider *>(m_collider.get());
+            const auto *cap = dynamic_cast<const CapsuleCollider *>(m_collider.get());
             if (!cap) break;
             const glm::vec2 a = cap->getWorldA();
             const glm::vec2 b = cap->getWorldB();
-            const float radius = 0.5f * std::min(cap->getAABB().width(), cap->getAABB().height());
-            // draw segment
-            glBegin(GL_LINES);
-            glVertex2f(a.x, a.y);
-            glVertex2f(b.x, b.y);
-            glEnd();
-            const glm::vec2 dir = glm::normalize(b - a);
+            const float radius = cap->getWorldRadius();
+            const glm::vec2 axis = b - a;
+            const float axisLength = glm::length(axis);
+            if (axisLength <= 1e-6f) {
+                Rendering::DebugDraw2D::circle(renderer, a, radius, thickness, color, 24);
+                break;
+            }
+            const glm::vec2 dir = axis / axisLength;
             const glm::vec2 perp = glm::vec2{-dir.y, dir.x};
-            const auto drawCap = [&](const glm::vec2 &center, float verticalSign) {
-                const int segments = 24;
-                glBegin(GL_LINE_STRIP);
+            const auto drawCap = [&](const glm::vec2& center, float directionSign) {
+                constexpr int segments = 16;
+                std::array<glm::vec2, segments + 1> points{};
                 for (int i = 0; i <= segments; ++i) {
-                    const float theta = (static_cast<float>(i) / segments) * glm::pi<float>();
-                    const glm::vec2 circle =
-                            std::cos(theta) * perp + verticalSign * std::sin(theta) * dir;
-                    glVertex2f(center.x + circle.x * radius, center.y + circle.y * radius);
+                    const float theta = static_cast<float>(i) /
+                                        static_cast<float>(segments) * glm::pi<float>();
+                    const glm::vec2 offset = std::cos(theta) * perp +
+                                             directionSign * std::sin(theta) * dir;
+                    points[static_cast<std::size_t>(i)] = center + offset * radius;
                 }
-                glEnd();
+                Rendering::DebugDraw2D::polyline(renderer, points, false,
+                                                 thickness, color);
             };
             drawCap(b, +1.0f);
             drawCap(a, -1.0f);
-            glBegin(GL_LINES);
-            const glm::vec2 topRight = b + perp * radius;
-            const glm::vec2 topLeft = b - perp * radius;
-            const glm::vec2 bottomRight = a + perp * radius;
-            const glm::vec2 bottomLeft = a - perp * radius;
-            glVertex2f(topLeft.x, topLeft.y);
-            glVertex2f(bottomLeft.x, bottomLeft.y);
-            glVertex2f(topRight.x, topRight.y);
-            glVertex2f(bottomRight.x, bottomRight.y);
-            glEnd();
+            Rendering::DebugDraw2D::line(renderer, b - perp * radius,
+                                         a - perp * radius, thickness, color);
+            Rendering::DebugDraw2D::line(renderer, b + perp * radius,
+                                         a + perp * radius, thickness, color);
             break;
         }
         default:

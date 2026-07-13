@@ -6,8 +6,11 @@
 
 #include "GameObjects/Components/ColliderComponent.hpp"
 #include "GameObjects/Entity.hpp"
+#include "Physics/BroadphaseBVH.hpp"
 #include "Physics/Collision/ACollider.hpp"
 #include "Physics/Collision/CollisionDispatcher.hpp"
+
+#include <unordered_map>
 
 namespace {
 bool isTrigger(const ACollider* c) {
@@ -22,10 +25,6 @@ bool hasTriggerOnceFired(const ACollider* c) {
 TriggerSystem::PairKey TriggerSystem::makeKey(uint64_t a, uint64_t b) {
     if (a < b) return PairKey{a, b};
     return PairKey{b, a};
-}
-
-bool TriggerSystem::overlapsAABB(const ACollider& a, const ACollider& b) {
-    return a.getAABB().overlaps(b.getAABB());
 }
 
 void TriggerSystem::clear() {
@@ -60,9 +59,22 @@ void TriggerSystem::handleExit(const ColliderEntry& a, const ColliderEntry& b) {
     }
 }
 
+void TriggerSystem::handleStay(const ColliderEntry& a, const ColliderEntry& b) {
+    if (a.component) {
+        a.component->invokeTriggerStay(*a.entity, *b.entity);
+    }
+    if (b.component) {
+        b.component->invokeTriggerStay(*b.entity, *a.entity);
+    }
+}
+
 void TriggerSystem::update(const std::vector<std::unique_ptr<Entity>>& entities) {
-    std::vector<ColliderEntry> entries;
-    entries.reserve(entities.size());
+    m_entryScratch.clear();
+    m_entryScratch.reserve(entities.size());
+    m_broadphaseScratch.clear();
+    m_broadphaseScratch.reserve(entities.size());
+    m_entriesById.clear();
+    m_entriesById.reserve(entities.size());
 
     for (const auto& ePtr : entities) {
         if (!ePtr) continue;
@@ -71,42 +83,62 @@ void TriggerSystem::update(const std::vector<std::unique_ptr<Entity>>& entities)
         colliderComp->ensureCollider(*ePtr);
         auto* collider = colliderComp->collider();
         if (!collider) continue;
-        entries.push_back(ColliderEntry{ePtr.get(), colliderComp, collider});
+        m_entryScratch.push_back(ColliderEntry{ePtr.get(), colliderComp, collider});
+    }
+    for (ColliderEntry& entry : m_entryScratch) {
+        m_broadphaseScratch.push_back({entry.collider->getAABB(), &entry});
+        m_entriesById.emplace(entry.entity->getId(), &entry);
     }
 
-    for (size_t i = 0; i < entries.size(); ++i) {
-        for (size_t j = i + 1; j < entries.size(); ++j) {
-            const auto& a = entries[i];
-            const auto& b = entries[j];
-            const auto key = makeKey(a.entity->getId(), b.entity->getId());
-            const bool wasActive = m_activeOverlaps.contains(key);
+    m_overlapScratch.clear();
+    m_overlapScratch.reserve(m_activeOverlaps.size());
+    auto& overlapsThisStep = m_overlapScratch;
+    auto& entriesById = m_entriesById;
+    m_broadphase.build(m_broadphaseScratch);
+    m_pairScratch.clear();
+    m_broadphase.overlappingPairs(m_pairScratch);
+    for (const BroadphaseBVH::Pair& pair : m_pairScratch) {
+        auto* a = static_cast<ColliderEntry*>(pair.first);
+        auto* b = static_cast<ColliderEntry*>(pair.second);
+        if (!a || !b || !a->entity || !b->entity ||
+            !a->collider || !b->collider ||
+            (!isTrigger(a->collider) && !isTrigger(b->collider))) {
+            continue;
+        }
 
-            const bool anyTrigger = isTrigger(a.collider) || isTrigger(b.collider);
-            if (!anyTrigger) {
-                if (wasActive) {
-                    m_activeOverlaps.erase(key);
-                }
-                continue;
+        const PairKey key = makeKey(a->entity->getId(), b->entity->getId());
+        const bool wasActive = m_activeOverlaps.contains(key);
+        const bool aTriggeredBefore = hasTriggerOnceFired(a->collider);
+        const bool bTriggeredBefore = hasTriggerOnceFired(b->collider);
+        const bool consumedOneShot = aTriggeredBefore || bTriggeredBefore;
+        const bool overlapping = static_cast<bool>(
+            CollisionDispatcher::dispatch(*a->collider, *b->collider));
+        if (!overlapping || (consumedOneShot && !wasActive)) {
+            continue;
+        }
+
+        overlapsThisStep.insert(key);
+        if (!wasActive) {
+            handleEnter(*a, *b, aTriggeredBefore, bTriggeredBefore);
+            if (a->collider->isTrigger() && a->collider->triggersOnce()) {
+                a->collider->markTriggerFired();
             }
-
-            const bool aTriggeredBefore = hasTriggerOnceFired(a.collider);
-            const bool bTriggeredBefore = hasTriggerOnceFired(b.collider);
-            auto hit = CollisionDispatcher::dispatch(*a.collider, *b.collider);
-            bool overlapping = static_cast<bool>(hit);
-
-            if (!overlapping && wasActive) {
-                overlapping = overlapsAABB(*a.collider, *b.collider);
-            }
-
-            if (overlapping) {
-                const bool inserted = m_activeOverlaps.insert(key).second;
-                if (inserted) {
-                    handleEnter(a, b, aTriggeredBefore, bTriggeredBefore);
-                }
-            } else if (wasActive) {
-                m_activeOverlaps.erase(key);
-                handleExit(a, b);
+            if (b->collider->isTrigger() && b->collider->triggersOnce()) {
+                b->collider->markTriggerFired();
             }
         }
+        handleStay(*a, *b);
     }
+
+    for (const PairKey& active : m_activeOverlaps) {
+        if (overlapsThisStep.contains(active)) {
+            continue;
+        }
+        const auto first = entriesById.find(active.a);
+        const auto second = entriesById.find(active.b);
+        if (first != entriesById.end() && second != entriesById.end()) {
+            handleExit(*first->second, *second->second);
+        }
+    }
+    std::swap(m_activeOverlaps, m_overlapScratch);
 }

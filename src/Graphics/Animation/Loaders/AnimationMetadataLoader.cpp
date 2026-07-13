@@ -138,6 +138,9 @@ namespace Loaders {
         if (node.hasKey("texture")) {
             frame.texturePath = node.at("texture").asString();
         }
+        if (node.hasKey("normalTexture")) {
+            frame.normalTexturePath = node.at("normalTexture").asString();
+        }
         if (node.hasKey("event")) {
             frame.eventName = node.at("event").asString();
         }

@@ -70,5 +70,6 @@ void DialogueSystem::appendCommands(int fbWidth, int fbHeight, std::vector<UI::U
                   {0.25f, 0.7f, 1.0f, 1.0f},
                   {0.45f, 0.9f, 1.0f},
                   {0.95f, 0.95f, 0.95f});
-    box.buildRenderCommands(out, {static_cast<float>(fbWidth), static_cast<float>(fbHeight)});
+    box.buildRenderCommands(
+        out, glm::vec2{static_cast<float>(fbWidth), static_cast<float>(fbHeight)});
 }

@@ -85,9 +85,6 @@ void WaterSystem::update(float dt,
         });
     }
 
-    const glm::vec2 gDir = gravityDir(gravity);
-    const float gMag = glm::length(gravity);
-
     for (auto& body : bodies) {
         float maxSubmersion = 0.0f;
         glm::vec2 flowAccum{0.0f};

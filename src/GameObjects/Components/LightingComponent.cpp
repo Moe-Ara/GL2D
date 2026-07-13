@@ -10,8 +10,8 @@ LightingComponent::LightingComponent(const std::string &id, LightType type, glm:
                                      const std::string& cookiePath, float cookieStrength,
                                      std::optional<LightEffector> effector) :
         m_id(id), m_type(type),
-        m_localPos(pos), m_radius(radius),
-        m_color(color), m_intensity(intensity),
+        m_localPos(pos), m_color(color),
+        m_radius(radius), m_intensity(intensity),
         m_falloff(falloff), m_emissiveBoost(emissiveBoost),
         m_dir(dir), m_innerCutoff(innerCutoff), m_outerCutoff(outerCutoff),
         m_cookiePath(cookiePath), m_cookieStrength(cookieStrength),

@@ -1,11 +1,47 @@
 #include "DialogueBox.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <stdexcept>
 
 namespace UI {
 
-DialogueBox::DialogueBox(std::string id, UITransform transform, UIEffect effect, GameObjects::Texture* texture)
+DialogueBox::DialogueBox(std::string id, UITransform transform, UIEffect effect,
+                         std::shared_ptr<GameObjects::Texture> texture)
     : UIElement(std::move(id), transform, effect, texture) {}
+
+void DialogueBox::setPadding(float padding) {
+    setPadding(glm::vec2{padding});
+}
+
+void DialogueBox::setPadding(const glm::vec2& padding) {
+    if (!std::isfinite(padding.x) || !std::isfinite(padding.y) ||
+        padding.x < 0.0f || padding.y < 0.0f) {
+        throw std::invalid_argument("Dialogue padding must be finite and non-negative");
+    }
+    m_padding = padding;
+}
+
+void DialogueBox::setTextOffset(const glm::vec2& offset) {
+    if (!std::isfinite(offset.x) || !std::isfinite(offset.y)) {
+        throw std::invalid_argument("Dialogue text offset must be finite");
+    }
+    m_textOffset = offset;
+}
+
+void DialogueBox::setFontScale(float scale) {
+    if (!std::isfinite(scale) || scale <= 0.0f) {
+        throw std::invalid_argument("Dialogue font scale must be finite and positive");
+    }
+    m_fontScale = scale;
+}
+
+void DialogueBox::setSpeakerSpacing(float spacing) {
+    if (!std::isfinite(spacing) || spacing < 0.0f) {
+        throw std::invalid_argument("Dialogue speaker spacing must be finite and non-negative");
+    }
+    m_speakerSpacing = spacing;
+}
 
 std::string DialogueBox::wrapText(const std::string& text, int maxCharsPerLine) {
     if (maxCharsPerLine <= 0) return text;
@@ -37,11 +73,17 @@ std::string DialogueBox::wrapText(const std::string& text, int maxCharsPerLine) 
     return out;
 }
 
-void DialogueBox::buildRenderCommands(std::vector<UIRenderCommand>& out, const glm::vec2& canvasSize) const {
+void DialogueBox::buildRenderCommands(std::vector<UIRenderCommand>& out,
+                                      const glm::vec2& canvasSize) const {
+    collectRenderTree(out, canvasSize);
+}
+
+void DialogueBox::buildRenderCommands(std::vector<UIRenderCommand>& out,
+                                      const glm::vec4& resolvedBounds) const {
     if (!m_visible) return;
 
     // Panel and border
-    const glm::vec4 rect = bounds(canvasSize);
+    const glm::vec4 rect = resolvedBounds;
     const float x0 = rect.x;
     const float y0 = rect.y;
     const float x1 = rect.z;

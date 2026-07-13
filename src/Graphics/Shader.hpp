@@ -6,13 +6,8 @@
 #define GL2D_SHADER_HPP
 
 #include <string>
-#include <unordered_map>
-#include <Gl/glew.h>
+#include <GL/glew.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <fstream>
-#include <iostream>
-#include <sstream>
 namespace Graphics {
 
     class Shader {
@@ -32,14 +27,14 @@ namespace Graphics {
         void enable() const;
 
         // Set uniform variables
-        void setUniformFloat1(const std::string& name, float value);
-        void setUniformInt1(const std::string& name, int value);
-        void setUniformFloat2(const std::string& name, const glm::vec2& vector2);
-        void setUniformFloat3(const std::string& name, const glm::vec3& vector3);
+        void setUniformFloat1(const std::string& name, float value) const;
+        void setUniformInt1(const std::string& name, int value) const;
+        void setUniformFloat2(const std::string& name, const glm::vec2& vector2) const;
+        void setUniformFloat3(const std::string& name, const glm::vec3& vector3) const;
 
-        void setUniformFloat4(const std::string& name, const glm::vec4& vector4);
-        void setUniformMat4(const std::string& name, const glm::mat4& matrix);
-        void setUniformMat3(const std::string& name, const glm::mat3& matrix);
+        void setUniformFloat4(const std::string& name, const glm::vec4& vector4) const;
+        void setUniformMat4(const std::string& name, const glm::mat4& matrix) const;
+        void setUniformMat3(const std::string& name, const glm::mat3& matrix) const;
 
     private:
         // Shader program ID
@@ -50,11 +45,9 @@ namespace Graphics {
 
         // Load and compile shaders, and link the shader program
         void load();
-        bool compileShader(GLuint shader, const std::string& code);
+        void compileShader(GLuint shader, const std::string& code, const std::string& sourcePath);
         GLint getUniformLocation(const GLchar* name) const;
         void linkProgram(GLuint vertex, GLuint fragment);
-        // Check for compilation errors
-        bool check_compilation_errors(GLuint shader, const std::string& code);
     };
 
 } // Graphics

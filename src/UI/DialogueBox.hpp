@@ -11,16 +11,16 @@ public:
     explicit DialogueBox(std::string id,
                          UITransform transform = {},
                          UIEffect effect = {},
-                         GameObjects::Texture* texture = nullptr);
+                         std::shared_ptr<GameObjects::Texture> texture = {});
 
     void setSpeaker(const std::string& speaker) { m_speaker = speaker; }
     void setText(const std::string& text) { m_text = text; }
-    void setPadding(float pad) { m_padding = {pad, pad}; }
-    void setPadding(const glm::vec2& pad) { m_padding = pad; }
-    void setTextOffset(const glm::vec2& offset) { m_textOffset = offset; }
-    void setFontScale(float scale) { m_fontScale = scale; }
+    void setPadding(float pad);
+    void setPadding(const glm::vec2& pad);
+    void setTextOffset(const glm::vec2& offset);
+    void setFontScale(float scale);
     void setDrawPanel(bool draw) { m_drawPanel = draw; }
-    void setSpeakerSpacing(float spacing) { m_speakerSpacing = spacing; }
+    void setSpeakerSpacing(float spacing);
     void setColors(const glm::vec4& bg, const glm::vec4& border, const glm::vec3& speaker, const glm::vec3& body) {
         m_bgColor = bg;
         m_borderColor = border;
@@ -28,7 +28,13 @@ public:
         m_bodyColor = body;
     }
 
-    void buildRenderCommands(std::vector<UIRenderCommand>& out, const glm::vec2& canvasSize) const override;
+    // Compatibility helper for callers that render a standalone dialogue box.
+    void buildRenderCommands(std::vector<UIRenderCommand>& out,
+                             const glm::vec2& canvasSize) const;
+
+protected:
+    void buildRenderCommands(std::vector<UIRenderCommand>& out,
+                             const glm::vec4& resolvedBounds) const override;
 
 private:
     static std::string wrapText(const std::string& text, int maxCharsPerLine);

@@ -21,6 +21,9 @@ public:
 
     IController* controller() { return m_controller.get(); }
     const IController* controller() const { return m_controller.get(); }
+    void applyFeeling(const FeelingsSystem::FeelingSnapshot& snapshot) {
+        if (m_controller) m_controller->applyFeeling(snapshot);
+    }
     void setEnabled(bool enabled) { m_enabled = enabled; }
     bool isEnabled() const { return m_enabled; }
 

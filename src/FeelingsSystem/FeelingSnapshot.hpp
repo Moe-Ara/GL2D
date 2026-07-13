@@ -6,9 +6,11 @@
 #define GL2D_FEELINGSNAPSHOT_HPP
 #include <string>
 #include <optional>
-#include "glm/glm.hpp"
-namespace FeelingsSystem{
-    struct FeelingSnapshot{
+#include <glm/glm.hpp>
+
+namespace FeelingsSystem {
+
+    struct FeelingSnapshot {
         std::string id{};
 
         float blendInMs{500.f};
@@ -39,7 +41,7 @@ namespace FeelingsSystem{
 
 
         //Particles
-        std::optional<std::string > particlePresetId{};
+        std::optional<std::string> particlePresetId{};
         std::optional<glm::vec4> ambientLight{};
         std::optional<glm::vec4> fogColor{};
         std::optional<float> fogDensity{};
@@ -51,9 +53,9 @@ namespace FeelingsSystem{
         std::optional<glm::vec3> ambientLightAdd{};
 
         //Audio
-        std::optional<std::string > musicTrackId{};
+        std::optional<std::string> musicTrackId{};
         std::optional<float> musicVolume{};
-        std::optional<std::string > sfxTag{};
+        std::optional<std::string> sfxTag{};
         std::optional<float> sfxVolumeMul{};
         std::optional<std::string> audioFxPreset{};   // Named preset in your audio layer.
         std::optional<float> reverbSend{};            // 0..1 send amount.
@@ -64,8 +66,13 @@ namespace FeelingsSystem{
         std::optional<float> highpassHz{};            // Optional high-pass cutoff.
 
         //UI
-        std::optional<glm::vec4 > uiTint{};
+        std::optional<glm::vec4> uiTint{};
         std::optional<float> uiLerpSpeed{};
     };
+
+    // Returns a precise diagnostic when a programmatic or loaded snapshot
+    // violates the shared feelings data contract.
+    [[nodiscard]] std::optional<std::string> validationError(
+        const FeelingSnapshot& snapshot);
 }
 #endif //GL2D_FEELINGSNAPSHOT_HPP

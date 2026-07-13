@@ -3,13 +3,22 @@
 #include <algorithm>
 #include <array>
 #include <functional>
+#include <cmath>
+#include <stdexcept>
 #include <utility>
 
 namespace {
 constexpr float kEpsilon = 1e-4f;
 }
 
+Quadtree::Quadtree(const AABB& worldBounds)
+    : Quadtree(worldBounds, Config{}) {}
+
 Quadtree::Quadtree(const AABB& worldBounds, Config config) : m_config(config) {
+    if (config.maxDepth < 0 || config.maxObjectsPerNode <= 0 ||
+        !std::isfinite(config.minSize) || config.minSize <= 0.0f) {
+        throw std::invalid_argument("Quadtree configuration contains invalid values");
+    }
     m_root.bounds = worldBounds;
 }
 
@@ -34,17 +43,21 @@ void Quadtree::setBounds(const glm::vec2& min, const glm::vec2& max, bool prebui
 
 void Quadtree::insert(const AABB& bounds, void* user) {
     if (!user) return;
+    if (!m_root.bounds.contains(bounds.getMin()) ||
+        !m_root.bounds.contains(bounds.getMax())) {
+        throw std::out_of_range("Quadtree entry lies outside the configured world bounds");
+    }
     insert(m_root, bounds, user, 0);
 }
 
-void Quadtree::update(const AABB& oldBounds, const AABB& newBounds, void* user) {
+void Quadtree::update(const AABB& /*oldBounds*/, const AABB& newBounds, void* user) {
     remove(user);
     insert(newBounds, user);
 }
 
 void Quadtree::remove(void* user) {
     if (!user) return;
-    remove(m_root, user);
+    remove(m_root, user, 0);
 }
 
 void Quadtree::query(const AABB& queryBounds, std::vector<void*>& out) const {
@@ -185,7 +198,7 @@ void Quadtree::query(const Node& node, const AABB& queryBounds, std::vector<void
     }
 }
 
-bool Quadtree::remove(Node& node, void* user) {
+bool Quadtree::remove(Node& node, void* user, int depth) {
     const auto it = std::find_if(node.items.begin(), node.items.end(),
                                  [&](const Entry& e) { return e.user == user; });
     if (it != node.items.end()) {
@@ -197,14 +210,14 @@ bool Quadtree::remove(Node& node, void* user) {
 
     bool removed = false;
     for (auto& child : node.children) {
-        if (child && remove(*child, user)) {
+        if (child && remove(*child, user, depth + 1)) {
             removed = true;
             break;
         }
     }
 
     if (removed) {
-        maybeMerge(node, 0);
+        maybeMerge(node, depth);
     }
     return removed;
 }
@@ -212,20 +225,35 @@ bool Quadtree::remove(Node& node, void* user) {
 void Quadtree::maybeMerge(Node& node, int depth) {
     if (node.isLeaf()) return;
 
-    int total = static_cast<int>(node.items.size());
-    for (const auto& child : node.children) {
-        if (child) {
-            total += static_cast<int>(child->items.size());
-        }
-    }
-
-    const bool shouldMerge = total <= m_config.maxObjectsPerNode || depth >= m_config.maxDepth;
+    const std::size_t total = itemCount(node);
+    const bool shouldMerge =
+        total <= static_cast<std::size_t>(m_config.maxObjectsPerNode) ||
+        depth >= m_config.maxDepth;
     if (!shouldMerge) return;
 
     for (auto& child : node.children) {
         if (child) {
-            node.items.insert(node.items.end(), child->items.begin(), child->items.end());
+            collectItems(*child, node.items);
             child.reset();
+        }
+    }
+}
+
+std::size_t Quadtree::itemCount(const Node& node) const {
+    std::size_t total = node.items.size();
+    for (const auto& child : node.children) {
+        if (child) {
+            total += itemCount(*child);
+        }
+    }
+    return total;
+}
+
+void Quadtree::collectItems(Node& node, std::vector<Entry>& output) {
+    output.insert(output.end(), node.items.begin(), node.items.end());
+    for (auto& child : node.children) {
+        if (child) {
+            collectItems(*child, output);
         }
     }
 }

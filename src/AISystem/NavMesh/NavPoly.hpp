@@ -12,7 +12,7 @@ struct NavPortal {
 
 struct NavPoly
 {
-    int id;
+    int id{-1};
     std::vector<glm::vec2> vertices;
     std::vector<int> neighbors;   // indices into a navpoly array
     std::vector<NavPortal> portals;

@@ -1,17 +1,36 @@
 #include "VehicleMountComponent.hpp"
 
-#include <glm/glm.hpp>
-#include <GL/glew.h>
 #include <cmath>
+#include <stdexcept>
 
 #include "Engine/VehicleController.hpp"
 #include "GameObjects/Components/ControllerComponent.hpp"
 #include "GameObjects/Components/TransformComponent.hpp"
 #include "GameObjects/Components/ColliderComponent.hpp"
 #include "GameObjects/Entity.hpp"
-#include "Graphics/Camera/Camera.hpp"
 #include "InputSystem/InputTypes.hpp"
 #include "Physics/Collision/AABB.hpp"
+
+void VehicleMountComponent::setMountRadius(float radius) {
+    if (!std::isfinite(radius) || radius < 0.0f) {
+        throw std::invalid_argument("Vehicle mount radius must be finite and non-negative");
+    }
+    m_mountRadius = radius;
+}
+
+void VehicleMountComponent::setSeatOffset(const glm::vec2& offset) {
+    if (!std::isfinite(offset.x) || !std::isfinite(offset.y)) {
+        throw std::invalid_argument("Vehicle seat offset must be finite");
+    }
+    m_seatOffset = offset;
+}
+
+void VehicleMountComponent::setInteractActionName(const std::string& name) {
+    if (name.empty()) {
+        throw std::invalid_argument("Vehicle interaction action name cannot be empty");
+    }
+    m_interactAction = name;
+}
 
 bool VehicleMountComponent::isInteractPressedThisFrame() const {
     for (const auto& evt : m_inputService.getActionEvents()) {
@@ -45,31 +64,6 @@ VehicleController* VehicleMountComponent::resolveVehicleController(Entity& owner
     return dynamic_cast<VehicleController*>(ctrlComp->controller());
 }
 
-void VehicleMountComponent::drawRadius(Entity& owner) const {
-    if (!m_debugCamera) return;
-    auto* vehicleTransform = owner.getComponent<TransformComponent>();
-    if (!vehicleTransform) return;
-
-    const glm::vec2 center = vehicleTransform->getTransform().Position + m_seatOffset;
-    const glm::mat4 viewProj = m_debugCamera->getViewProjection();
-    glUseProgram(0);
-    glMatrixMode(GL_PROJECTION);
-    glLoadMatrixf(&viewProj[0][0]);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glColor3f(0.2f, 0.9f, 0.6f);
-    glLineWidth(1.5f);
-    const int segments = 48;
-    glBegin(GL_LINE_LOOP);
-    for (int i = 0; i < segments; ++i) {
-        const float theta = (static_cast<float>(i) / segments) * 2.0f * 3.1415926f;
-        const float x = center.x + std::cos(theta) * m_mountRadius;
-        const float y = center.y + std::sin(theta) * m_mountRadius;
-        glVertex2f(x, y);
-    }
-    glEnd();
-}
-
 void VehicleMountComponent::update(Entity& owner, double /*dt*/) {
     auto* vehicleController = resolveVehicleController(owner);
     if (!vehicleController || !m_rider) {
@@ -79,11 +73,6 @@ void VehicleMountComponent::update(Entity& owner, double /*dt*/) {
     vehicleController->setSeatOffset(m_seatOffset);
     if (m_mounted && !vehicleController->isMounted()) {
         m_mounted = false;
-    }
-
-    const bool close = riderIsClose(owner);
-    if (close) {
-        drawRadius(owner);
     }
 
     if (isInteractPressedThisFrame()) {

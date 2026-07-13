@@ -8,6 +8,10 @@
 
 #include "Graphics/Animation/Animator.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 class AnimatorManager {
 public:
     AnimatorManager() = delete;
@@ -22,14 +26,18 @@ public:
 
     AnimatorManager &operator=(AnimatorManager &&other) = delete;
 
-    static void registerAnimator(const std::string &id, Graphics::Animator *animator);
+    static void registerAnimator(
+        const std::string& id,
+        const std::shared_ptr<Graphics::Animator>& animator);
 
-    static Graphics::Animator *get(const std::string &id);
+    static std::shared_ptr<Graphics::Animator> get(const std::string &id);
 
     static bool contains(const std::string &id);
+    static bool unregisterAnimator(const std::string& id);
+    static void clear() noexcept;
 
 private:
-    static std::unordered_map<std::string, Graphics::Animator *> s_animators;
+    static std::unordered_map<std::string, std::weak_ptr<Graphics::Animator>> s_animators;
 };
 
 

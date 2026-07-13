@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 
 namespace Managers { class TextureManager; }
+struct GLFWwindow;
 namespace GameObjects {
 
     class Texture {
@@ -34,6 +35,7 @@ namespace GameObjects {
 
         GLuint m_textureID{};
         int m_width{}, m_height{}, m_numChannels{};
+        GLFWwindow* m_ownerContext{nullptr};
     };
 
 } // namespace GameObjects

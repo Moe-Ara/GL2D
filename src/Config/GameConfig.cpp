@@ -50,6 +50,9 @@ PlayerConfig parseConfig(const Utils::JsonValue &root) {
                true);
     readNumber(movementSource, "jumpImpulse", config.movement.jumpImpulse,
                true);
+    readNumber(movementSource, "coyoteTime", config.movement.coyoteTime);
+    readNumber(movementSource, "jumpBufferTime", config.movement.jumpBufferTime);
+    readNumber(movementSource, "jumpCutMultiplier", config.movement.jumpCutMultiplier);
     readNumber(movementSource, "gravity", config.movement.gravity, true);
     readNumber(movementSource, "walkSpeedMultiplier",
                config.movement.walkSpeedMultiplier);
