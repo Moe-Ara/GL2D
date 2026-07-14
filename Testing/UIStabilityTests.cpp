@@ -123,7 +123,8 @@ BOOST_AUTO_TEST_CASE(screen_rejects_invalid_canvas_dimensions) {
     UI::UIScreen screen{};
     screen.canvasSize = {0.0f, 720.0f};
     BOOST_CHECK_THROW(screen.update(0.016f, {}), std::invalid_argument);
-    BOOST_CHECK_THROW(screen.collectRenderCommands(), std::invalid_argument);
+    BOOST_CHECK_THROW(static_cast<void>(screen.collectRenderCommands()),
+                      std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
