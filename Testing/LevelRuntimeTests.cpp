@@ -143,14 +143,25 @@ BOOST_AUTO_TEST_CASE(level_loader_rejects_broken_content_references) {
     LevelData missingPrefab{};
     missingPrefab.metadata.name = "broken";
     missingPrefab.instances.push_back(
-        LevelInstance{.prefabId = "definitely.missing.prefab"});
+        LevelInstance{
+            .prefabId = "definitely.missing.prefab",
+            .pos = {0.0f, 0.0f},
+            .scale = {1.0f, 1.0f},
+            .rot = 0.0f,
+            .overrides = {}});
     BOOST_CHECK_THROW(LevelLoader::loadFromData(missingPrefab),
                       Engine::LevelException);
 
     LevelData missingTilemap{};
     missingTilemap.metadata.name = "broken";
     missingTilemap.tileLayers.push_back(
-        TileLayer{.tilemapId = "definitely.missing.tilemap"});
+        TileLayer{
+            .id = "missing",
+            .tilemapId = "definitely.missing.tilemap",
+            .tilesetId = "",
+            .collision = false,
+            .zIndex = 0,
+            .offset = {0.0f, 0.0f}});
     BOOST_CHECK_THROW(LevelLoader::loadFromData(missingTilemap),
                       Engine::LevelException);
 

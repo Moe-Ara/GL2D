@@ -49,7 +49,9 @@ BOOST_AUTO_TEST_CASE(combat_configuration_and_inputs_are_validated) {
                       std::invalid_argument);
     BOOST_CHECK_THROW(brain.update(-0.01f), std::invalid_argument);
     BOOST_CHECK_THROW(
-        brain.tryAttack(glm::vec2{std::numeric_limits<float>::quiet_NaN()}, glm::vec2{0.0f}),
+        static_cast<void>(brain.tryAttack(
+            glm::vec2{std::numeric_limits<float>::quiet_NaN()},
+            glm::vec2{0.0f})),
         std::invalid_argument);
 }
 

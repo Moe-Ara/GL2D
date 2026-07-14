@@ -77,9 +77,12 @@ BOOST_AUTO_TEST_CASE(world_to_cell_uses_floor_and_reports_failure) {
 BOOST_AUTO_TEST_CASE(cell_access_is_checked_and_predicate_build_is_validated) {
     NavRaster raster(2, 2, 2.0f, glm::vec2{-1.0f});
     BOOST_CHECK_THROW(raster.setWalkable(2, 0, false), std::out_of_range);
-    BOOST_CHECK_THROW(raster.cellCenter(-1, 0), std::out_of_range);
-    BOOST_CHECK_THROW(raster.cellBounds(0, 2), std::out_of_range);
-    BOOST_CHECK_THROW(raster.cellToWorld(3, 3), std::out_of_range);
+    BOOST_CHECK_THROW(static_cast<void>(raster.cellCenter(-1, 0)),
+                      std::out_of_range);
+    BOOST_CHECK_THROW(static_cast<void>(raster.cellBounds(0, 2)),
+                      std::out_of_range);
+    BOOST_CHECK_THROW(static_cast<void>(raster.cellToWorld(3, 3)),
+                      std::out_of_range);
     BOOST_CHECK_THROW(NavRaster::buildFromPredicate(2, 2, 1.0f, glm::vec2{0.0f}, {}),
                       std::invalid_argument);
 

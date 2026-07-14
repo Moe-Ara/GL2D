@@ -1,0 +1,73 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Linux / GCC
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends \
+            ccache \
+            libboost-test-dev \
+            libgl1-mesa-dev \
+            libglew-dev \
+            libglfw3-dev \
+            libglm-dev \
+            ninja-build
+
+      - name: Restore compiler cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-${{ runner.arch }}-ccache-${{ hashFiles('CMakeLists.txt', 'Demos/**/CMakeLists.txt', 'src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'Testing/**/*.cpp') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-ccache-
+
+      - name: Configure
+        run: >-
+          cmake -S . -B build-ci -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror"
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DGL2D_BUILD_TESTS=ON
+          -DGL2D_BUILD_DEMO=ON
+          -DGL2D_BUILD_EDITOR=OFF
+          -DGL2D_BUILD_BENCHMARKS=OFF
+          -DGL2D_GENERATE_NORMALS=OFF
+
+      - name: Build engine, demos, and tests
+        run: cmake --build build-ci --parallel 2
+
+      - name: Run tests
+        run: ctest --test-dir build-ci --output-on-failure --timeout 60
+
+      - name: Report compiler cache statistics
+        if: always()
+        run: ccache --show-stats

@@ -21,7 +21,7 @@ if(GL2D_BUILD_EDITOR)
 endif()
 
 if(GL2D_BUILD_TESTS)
-    find_package(Boost REQUIRED COMPONENTS unit_test_framework)
+    find_package(Boost CONFIG REQUIRED COMPONENTS unit_test_framework)
 endif()
 
 # Paths
@@ -133,7 +133,6 @@ if(GL2D_BUILD_TESTS)
     file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Testing/*.cpp")
 
     add_executable(GL2D_TEST ${TEST_SOURCES})
-    target_include_directories(GL2D_TEST PRIVATE ${Boost_INCLUDE_DIRS})
     target_link_libraries(GL2D_TEST PRIVATE gl2d_engine Boost::unit_test_framework)
     add_test(NAME GL2D_TEST COMMAND GL2D_TEST)
 endif()
