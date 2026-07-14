@@ -1,8 +1,34 @@
-cmake-build-debug/
-.vscode/
-.idea/
-vc140.pdb
-.clangd
-compile_commands.json
-build/
-build-clangd/
+# Editors and language servers
+/.vscode/
+/.idea/
+/.clangd/
+/compile_commands.json
+
+# Out-of-tree CMake builds
+/build/
+/build-*/
+/cmake-build-*/
+
+# Accidental in-source CMake output
+/CMakeCache.txt
+/CMakeFiles/
+/CTestTestfile.cmake
+/cmake_install.cmake
+
+# Compiler, linker, and profiling output
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.exe
+*.pdb
+/gmon.out
+
+# Common local caches and temporary files
+__pycache__/
+*.pyc
+*.tmp
+*.bak
+*~
+.DS_Store

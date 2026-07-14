@@ -73,7 +73,13 @@ BOOST_AUTO_TEST_CASE(update_must_run_before_commands) {
     BOOST_TEST(cmds.empty());
 
     // After update, commands should be produced.
-    dialogue.enqueue(DialogueSystem::Line{.speaker = "S", .text = "---"});
+    dialogue.enqueue(DialogueSystem::Line{
+        .speaker = "S",
+        .text = "---",
+        .audioTriggerId = "",
+        .audioPath = "",
+        .duckDb = -8.0f,
+        .duration = 0.0f});
     dialogue.update(0.016f, audio);
     cmds.clear();
     dialogue.appendCommands(800, 600, cmds);

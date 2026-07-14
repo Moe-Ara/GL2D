@@ -1,6 +1,7 @@
 <div align="center">
   <h1>GL2D</h1>
   <p>Modern C++ 2D engine with layered rendering, gameplay systems, and editor-ready foundations.</p>
+  <p><a href="https://github.com/Moe-Ara/GL2D/actions/workflows/tests.yml"><img src="https://github.com/Moe-Ara/GL2D/actions/workflows/tests.yml/badge.svg" alt="Tests status"/></a></p>
   <p>
     <img src="docs/TheLostHeroin.gif" alt="Engine demo showcase" width="900"/>
   </p>
@@ -93,6 +94,9 @@ Optional targets are controlled independently:
 For a minimal engine-only build, configure with `-DGL2D_BUILD_DEMO=OFF`.
 To run the test suite, configure with `-DGL2D_BUILD_TESTS=ON`, build, then run
 `ctest --test-dir build --output-on-failure`.
+
+GitHub Actions runs the test suite with strict compiler warnings and also builds
+the engine and both demos on every pull request to `master`.
 
 ## Run (Demo)
 The demo executable is generated under `Demos/The Lost Heroin` in the selected
